@@ -61,8 +61,8 @@ impl RegisterPair {
         output
     }
 
-    pub fn full(&self) -> u16 {
-        (self.high as u16) << 8 | self.low as u16
+    pub fn full(self) -> u16 {
+        u16::from(self.high) << 8 | u16::from(self.low)
     }
     pub fn set_full(&mut self, value: u16) {
         self.high = (value >> 8) as u8;
@@ -73,14 +73,14 @@ impl RegisterPair {
 /// Represents individual Z80 status flags.
 #[repr(u8)]
 pub enum Flag {
-    S = 0b10000000,
-    Z = 0b01000000,
-    F5 = 0b00100000,
-    H = 0b00010000,
-    F3 = 0b00001000,
-    PV = 0b00000100,
-    N = 0b00000010,
-    C = 0b00000001,
+    S = 0b1000_0000,
+    Z = 0b0100_0000,
+    F5 = 0b0010_0000,
+    H = 0b0001_0000,
+    F3 = 0b0000_1000,
+    PV = 0b0000_0100,
+    N = 0b0000_0010,
+    C = 0b0000_0001,
 }
 
 impl Flag {
