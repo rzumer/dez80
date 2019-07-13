@@ -1,7 +1,7 @@
-mod operation;
+mod instruction;
 mod storage;
 
-use operation::Operation;
+use instruction::{Instruction, Operation};
 use std::collections::VecDeque;
 use storage::*;
 
@@ -9,7 +9,7 @@ use storage::*;
 #[derive(Default)]
 pub struct CPU {
     registers: RegisterSet,
-    work_queue: VecDeque<Operation>,
+    work_queue: VecDeque<Instruction>,
     queued_cycles: usize
 }
 
@@ -45,17 +45,16 @@ impl CPU {
         self.queued_cycles = 0;
         let mut elapsed_cycles = 0;
 
-        while let Some(operation) = self.work_queue.get(0) {
-            if operation.cycles > target_cycles {
+        while let Some(instruction) = self.work_queue.get(0) {
+            if instruction.cycles > target_cycles {
                 break;
             } else {
-                elapsed_cycles += operation.cycles;
+                elapsed_cycles += instruction.cycles;
             }
 
-            match operation {
-                _ => {
-                    // NOP
-                }
+            match instruction.operation {
+                Operation::None => (),
+                _ => unreachable!("Unknown operation")
             }
 
             self.work_queue.remove(0);
@@ -68,14 +67,13 @@ impl CPU {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use operation::*;
 
     #[test]
-    fn run_cpu() {
+    fn queue_cycles() {
         let mut cpu: CPU = CPU::default();
         assert_eq!(0, cpu.queued_cycles);
 
-        cpu.work_queue.push_back(NO_OP);
+        cpu.work_queue.push_back(Instruction::NOP);
 
         cpu.run(2);
         assert_eq!(2, cpu.queued_cycles);
@@ -83,7 +81,7 @@ mod tests {
         cpu.run(4);
         assert_eq!(2, cpu.queued_cycles);
 
-        cpu.work_queue.push_back(NO_OP);
+        cpu.work_queue.push_back(Instruction::NOP);
 
         cpu.run(2);
         assert_eq!(0, cpu.queued_cycles);

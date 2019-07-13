@@ -1,5 +1,6 @@
 /// Used to identify a single register in a manner
 /// independent of its representation in a `RegisterSet`.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RegisterType {
     A, F, B, C, D, E, H, L,
     X, Y,
@@ -9,6 +10,7 @@ pub enum RegisterType {
 
 /// Used to identify a register pair in a manner
 /// independent of its representation in a `RegisterSet`.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RegisterPairType {
     AF, BC, DE, HL,
     IX, IY, PC, SP,
