@@ -53,7 +53,8 @@ impl Instruction {
 
     /// Decodes a single instruction (opcode and operands).
     pub fn decode<R: Read>(reader: &mut Bytes<R>) -> Option<Self> {
-        /// Flattens the return value of the next byte from the iterator to an Option<u8>.
+        /// Flattens the return value of the next byte from the iterator to an `Option<u8>`.
+        /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
         fn flatten<E: Error>(byte: Option<Result<u8, E>>) -> Option<u8> {
             byte.and_then(|b| b.ok())
         }
