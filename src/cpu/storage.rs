@@ -2,20 +2,45 @@
 /// independent of its representation in a `RegisterSet`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RegisterType {
-    A, F, B, C, D, E, H, L,
-    X, Y,
-    I, R,
-    A_, F_, B_, C_, D_, E_, H_, L_
+    A,
+    F,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    X,
+    Y,
+    I,
+    R,
+    A_,
+    F_,
+    B_,
+    C_,
+    D_,
+    E_,
+    H_,
+    L_,
 }
 
 /// Used to identify a register pair in a manner
 /// independent of its representation in a `RegisterSet`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RegisterPairType {
-    AF, BC, DE, HL,
-    IX, IY, PC, SP,
+    AF,
+    BC,
+    DE,
+    HL,
+    IX,
+    IY,
+    PC,
+    SP,
     IR,
-    AF_, BC_, DE_, HL_
+    AF_,
+    BC_,
+    DE_,
+    HL_,
 }
 
 /// Represents a single-byte register.
@@ -25,7 +50,7 @@ pub type Register = u8;
 #[derive(Clone, Copy, Default)]
 pub struct RegisterPair {
     pub high: Register,
-    pub low: Register
+    pub low: Register,
 }
 
 impl RegisterPair {
@@ -36,7 +61,9 @@ impl RegisterPair {
         output
     }
 
-    pub fn full(&self) -> u16 { (self.high as u16) << 8 | self.low as u16 }
+    pub fn full(&self) -> u16 {
+        (self.high as u16) << 8 | self.low as u16
+    }
     pub fn set_full(&mut self, value: u16) {
         self.high = (value >> 8) as u8;
         self.low = value as u8;
@@ -53,7 +80,7 @@ pub enum Flag {
     F3 = 0b00001000,
     PV = 0b00000100,
     N = 0b00000010,
-    C = 0b00000001
+    C = 0b00000001,
 }
 
 impl Flag {
@@ -71,11 +98,13 @@ impl Flag {
 /// Represents a set of Z80 status flags as stored in a register.
 /// The backing data is a `Register` stored as a reference.
 pub struct FlagSet<'a> {
-    pub full: &'a mut Register
+    pub full: &'a mut Register,
 }
 
 impl<'a> FlagSet<'a> {
-    pub fn flag(&self, flag: Flag) -> bool { *self.full & (flag as u8) > 0 }
+    pub fn flag(&self, flag: Flag) -> bool {
+        *self.full & (flag as u8) > 0
+    }
     pub fn set_flag(&mut self, flag: Flag, on: bool) {
         *self.full = if on {
             *self.full | flag as u8
@@ -86,7 +115,9 @@ impl<'a> FlagSet<'a> {
 }
 
 impl<'a> From<&'a mut u8> for FlagSet<'a> {
-    fn from(value: &'a mut u8) -> Self { FlagSet { full: value } }
+    fn from(value: &'a mut u8) -> Self {
+        FlagSet { full: value }
+    }
 }
 
 /// Represents the standard set of registers in a Z80 CPU.
@@ -107,7 +138,7 @@ pub struct RegisterSet {
     af_: RegisterPair,
     bc_: RegisterPair,
     de_: RegisterPair,
-    hl_: RegisterPair
+    hl_: RegisterPair,
 }
 
 impl RegisterSet {
@@ -138,7 +169,7 @@ impl RegisterSet {
             D_ => self.de_.high,
             E_ => self.de_.low,
             H_ => self.hl_.high,
-            L_ => self.hl_.low
+            L_ => self.hl_.low,
         }
     }
 
@@ -158,7 +189,7 @@ impl RegisterSet {
             AF_ => self.af_.full(),
             BC_ => self.bc_.full(),
             DE_ => self.de_.full(),
-            HL_ => self.hl_.full()
+            HL_ => self.hl_.full(),
         }
     }
 
@@ -185,7 +216,7 @@ impl RegisterSet {
             D_ => self.de_.high = value,
             E_ => self.de_.low = value,
             H_ => self.hl_.high = value,
-            L_ => self.hl_.low = value
+            L_ => self.hl_.low = value,
         }
     }
 
@@ -205,7 +236,7 @@ impl RegisterSet {
             AF_ => self.af_.set_full(value),
             BC_ => self.bc_.set_full(value),
             DE_ => self.de_.set_full(value),
-            HL_ => self.hl_.set_full(value)
+            HL_ => self.hl_.set_full(value),
         }
     }
 }

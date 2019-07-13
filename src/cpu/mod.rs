@@ -10,7 +10,7 @@ use storage::*;
 pub struct CPU {
     registers: RegisterSet,
     work_queue: VecDeque<Instruction>,
-    queued_cycles: usize
+    queued_cycles: usize,
 }
 
 impl CPU {
@@ -54,7 +54,7 @@ impl CPU {
 
             match instruction.operation {
                 Operation::None => (),
-                _ => unreachable!("Unknown operation")
+                _ => unreachable!("Unknown operation"),
             }
 
             self.work_queue.remove(0);

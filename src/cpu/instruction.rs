@@ -1,6 +1,6 @@
+use super::storage::{RegisterPairType, RegisterType};
 use std::error::Error;
 use std::io::{Bytes, Read};
-use super::storage::{RegisterPairType, RegisterType};
 
 macro_rules! instruction {
     ($name: expr, $operation: expr, $cycles: expr, $source: ident, $dest: ident) => {
@@ -9,7 +9,7 @@ macro_rules! instruction {
             operation: $operation,
             cycles: $cycles,
             source: $source,
-            destination: $dest
+            destination: $dest,
         }
     };
     ($name: expr, $operation: expr, $cycles: expr) => {
@@ -18,7 +18,7 @@ macro_rules! instruction {
             operation: $operation,
             cycles: $cycles,
             source: None,
-            destination: None
+            destination: None,
         }
     };
 }
@@ -27,7 +27,7 @@ macro_rules! instruction {
 /// informs its concrete implementation on the CPU.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Operation {
-    None
+    None,
 }
 
 /// Represents a target for CPU data operations.
@@ -35,7 +35,7 @@ pub enum Operation {
 pub enum DataLocation {
     Register(RegisterType),
     RegisterPair(RegisterPairType),
-    Memory(u16)
+    Memory(u16),
 }
 
 /// Represents a single Z80 instruction (machine cycle granularity).
@@ -45,7 +45,7 @@ pub struct Instruction {
     pub operation: Operation,
     pub cycles: usize,
     pub source: Option<DataLocation>,
-    pub destination: Option<DataLocation>
+    pub destination: Option<DataLocation>,
 }
 
 impl Instruction {
@@ -53,7 +53,6 @@ impl Instruction {
 
     /// Decodes a single instruction (opcode and operands).
     pub fn decode<R: Read>(reader: &mut Bytes<R>) -> Option<Self> {
-
         /// Flattens the return value of the next byte from the iterator to an Option<u8>.
         fn flatten<E: Error>(byte: Option<Result<u8, E>>) -> Option<u8> {
             byte.and_then(|b| b.ok())
@@ -62,10 +61,9 @@ impl Instruction {
         if let Some(opcode) = flatten(reader.next()) {
             return match opcode {
                 0x00 => Some(Instruction::NOP),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             };
-        }
-        else {
+        } else {
             return None;
         }
     }
