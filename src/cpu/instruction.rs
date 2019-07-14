@@ -3,12 +3,13 @@ use super::micro_operation::{
 };
 use super::storage::{RegisterPairType, RegisterType};
 use std::error::Error;
+use std::fmt;
 use std::io::{Bytes, Read};
 
 macro_rules! instruction {
     ($opcode: expr, $name: expr, $( $operations: expr ),*) => {
         Instruction {
-            opcode: $opcode as u32,
+            opcode: u32::from($opcode),
             name: $name,
             operations: vec!($( $operations )*),
         }
@@ -19,7 +20,7 @@ macro_rules! instruction {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Instruction {
     pub opcode: u32,
-    pub name: &'static str,
+    pub name: String,
     pub operations: Vec<MicroOperation>,
 }
 
@@ -52,17 +53,21 @@ impl Instruction {
             use RegisterType::*;
 
             let instruction = match opcode {
-                0x00 => instruction!(opcode, "NOP", NO_OP),
-                0x01 => instruction!(
-                    opcode,
-                    "LD BC, (nn)",
-                    micro_op!(
-                        Load,
-                        10,
-                        MemoryImmediate(next_word(bytes)?),
-                        RegisterPair(BC)
+                0x00 => instruction!(opcode, "NOP".to_string(), NO_OP),
+                0x01 => {
+                    let operand = next_word(bytes)?;
+
+                    instruction!(
+                        opcode,
+                        format!("LD BC, ({:04X})", operand.swap_bytes()),
+                        micro_op!(
+                            Load,
+                            10,
+                            MemoryImmediate(operand),
+                            RegisterPair(BC)
+                        )
                     )
-                ),
+                }
                 _ => unimplemented!(),
             };
 
@@ -92,6 +97,13 @@ mod tests {
     fn decode_instruction() {
         let nop = Instruction::decode(&mut [0x00].bytes()).unwrap();
         assert_eq!(NO_OP, *nop.operations.first().unwrap());
+    }
+
+    #[test]
+    fn decode_instruction_with_formatted_name() {
+        let instruction_bytes = &mut [0x01, 0xF0, 0x0F].bytes();
+        let instruction = Instruction::decode(instruction_bytes).unwrap();
+        assert_eq!("LD BC, (F00F)", instruction.name);
     }
 
     #[test]
