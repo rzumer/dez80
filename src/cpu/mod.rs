@@ -64,8 +64,8 @@ impl CPU {
             }
 
             match operation.r#type {
-                MicroOperationType::None => (),
-                _ => unreachable!("Unknown operation"),
+                MicroOperationType::NoOperation => (),
+                _ => unimplemented!(),
             }
 
             self.work_queue.remove(0);
@@ -103,7 +103,7 @@ mod tests {
         cpu.registers.write(RegisterType::B, 0xFF);
 
         let conditional_operation = MicroOperation {
-            r#type: MicroOperationType::None,
+            r#type: MicroOperationType::NoOperation,
             cycles: 5,
             source: None,
             destination: None,

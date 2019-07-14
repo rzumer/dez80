@@ -1,4 +1,7 @@
-use super::micro_operation::{MicroOperation, NO_OP};
+use super::micro_operation::{
+    DataLocation, MicroOperation, MicroOperationType, NO_OP,
+};
+use super::storage::{RegisterPairType, RegisterType};
 use std::error::Error;
 use std::io::{Bytes, Read};
 
@@ -13,16 +16,14 @@ macro_rules! instruction {
 }
 
 /// Represents a single Z80 instruction (machine cycle granularity).
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Instruction<'a> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Instruction {
     pub opcode: u32,
     pub name: &'static str,
-    pub operations: &'a [MicroOperation],
+    pub operations: Vec<MicroOperation>,
 }
 
-impl<'a> Instruction<'a> {
-    pub const NOP: Instruction<'a> = instruction!(0x00, "NOP", &[NO_OP]);
-
+impl Instruction {
     /// Decodes a single instruction (opcode and operands).
     pub fn decode<R: Read>(bytes: &mut Bytes<R>) -> Option<Self> {
         /// Flattens the return value of the next byte from the iterator to an `Option<u8>`.
@@ -31,13 +32,43 @@ impl<'a> Instruction<'a> {
             byte.and_then(|b| b.ok())
         }
 
+        /// Flattens the next two bytes in the stream into a `Some(u16)` value,
+        /// or `None` if either byte cannot be read.
+        fn next_word<R: Read>(bytes: &mut Bytes<R>) -> Option<u16> {
+            let word_bytes = (flatten(bytes.next()), flatten(bytes.next()));
+
+            match word_bytes {
+                (Some(low), Some(high)) => {
+                    Some(u16::from(high) << 8 | u16::from(low))
+                }
+                _ => None,
+            }
+        }
+
         if let Some(opcode) = flatten(bytes.next()) {
-            return match opcode {
-                0x00 => Some(Instruction::NOP),
+            use DataLocation::*;
+            use MicroOperationType::*;
+            use RegisterPairType::*;
+            use RegisterType::*;
+
+            let instruction = match opcode {
+                0x00 => instruction!(opcode, "NOP", vec!(NO_OP)),
+                0x01 => instruction!(
+                    opcode,
+                    "LD BC, (nn)",
+                    vec!(micro_op!(
+                        Load,
+                        10,
+                        MemoryImmediate(next_word(bytes)?),
+                        RegisterPair(BC)
+                    ))
+                ),
                 _ => unimplemented!(),
             };
+
+            Some(instruction)
         } else {
-            return None;
+            None
         }
     }
 
@@ -59,8 +90,8 @@ mod tests {
 
     #[test]
     fn decode_instruction() {
-        let nop = Instruction::decode(&mut [0x00].bytes());
-        assert_eq!(Instruction::NOP, nop.unwrap());
+        let nop = Instruction::decode(&mut [0x00].bytes()).unwrap();
+        assert_eq!(NO_OP, *nop.operations.first().unwrap());
     }
 
     #[test]
@@ -70,7 +101,7 @@ mod tests {
         assert_eq!(3, nop_sequence.len());
 
         while let Some(nop) = nop_sequence.pop() {
-            assert_eq!(Instruction::NOP, nop);
+            assert_eq!(NO_OP, *nop.operations.first().unwrap());
         }
     }
 }

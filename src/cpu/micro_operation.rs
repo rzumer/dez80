@@ -1,6 +1,24 @@
 use super::storage::{Flag, RegisterPairType, RegisterSet, RegisterType};
 
 macro_rules! micro_op {
+    ($type: expr, $cycles: expr, $source: expr, $destination: expr, $condition: expr) => {
+        MicroOperation {
+            r#type: $type,
+            cycles: $cycles,
+            source: Some($source),
+            destination: Some($destination),
+            condition: Some($condition),
+        }
+    };
+    ($type: expr, $cycles: expr, $source: expr, $destination: expr) => {
+        MicroOperation {
+            r#type: $type,
+            cycles: $cycles,
+            source: Some($source),
+            destination: Some($destination),
+            condition: None,
+        }
+    };
     ($type: expr, $cycles: expr) => {
         MicroOperation {
             r#type: $type,
@@ -27,7 +45,7 @@ pub struct MicroOperation {
 /// CPU's execution strategy.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MicroOperationType {
-    None,
+    NoOperation,
     Load,
 }
 
@@ -64,4 +82,5 @@ impl Condition {
 }
 
 /// Defines a micro-operation matching the `NOP` instruction.
-pub const NO_OP: MicroOperation = micro_op!(MicroOperationType::None, 4);
+pub const NO_OP: MicroOperation =
+    micro_op!(MicroOperationType::NoOperation, 4);
