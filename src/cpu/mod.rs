@@ -1,7 +1,9 @@
+#[macro_use]
+mod micro_operation;
 mod instruction;
 mod storage;
 
-use instruction::{Instruction, Operation};
+use micro_operation::{MicroOperation, MicroOperationType};
 use std::collections::VecDeque;
 use storage::*;
 
@@ -9,7 +11,7 @@ use storage::*;
 #[derive(Default)]
 pub struct CPU {
     registers: RegisterSet,
-    work_queue: VecDeque<Instruction>,
+    work_queue: VecDeque<MicroOperation>,
     queued_cycles: usize,
 }
 
@@ -45,15 +47,24 @@ impl CPU {
         self.queued_cycles = 0;
         let mut elapsed_cycles = 0;
 
-        while let Some(instruction) = self.work_queue.get(0) {
-            if instruction.cycles > target_cycles {
-                break;
-            } else {
-                elapsed_cycles += instruction.cycles;
+        while let Some(operation) = self.work_queue.get(0) {
+            // If the run condition of the queued micro-operation
+            // is not fulfilled, skip it entirely.
+            if let Some(condition) = operation.condition {
+                if !condition.evaluate(&self.registers) {
+                    self.work_queue.remove(0);
+                    continue;
+                }
             }
 
-            match instruction.operation {
-                Operation::None => (),
+            if operation.cycles > target_cycles {
+                break;
+            } else {
+                elapsed_cycles += operation.cycles;
+            }
+
+            match operation.r#type {
+                MicroOperationType::None => (),
                 _ => unreachable!("Unknown operation"),
             }
 
@@ -67,13 +78,12 @@ impl CPU {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use micro_operation::{Condition, NO_OP};
 
     #[test]
     fn queue_cycles() {
         let mut cpu: CPU = CPU::default();
-        assert_eq!(0, cpu.queued_cycles);
-
-        cpu.work_queue.push_back(Instruction::NOP);
+        cpu.work_queue.push_back(NO_OP);
 
         cpu.run(2);
         assert_eq!(2, cpu.queued_cycles);
@@ -81,9 +91,29 @@ mod tests {
         cpu.run(4);
         assert_eq!(2, cpu.queued_cycles);
 
-        cpu.work_queue.push_back(Instruction::NOP);
+        cpu.work_queue.push_back(NO_OP);
 
         cpu.run(2);
         assert_eq!(0, cpu.queued_cycles);
+    }
+
+    #[test]
+    fn skip_conditional_operations() {
+        let mut cpu: CPU = CPU::default();
+        cpu.registers.write(RegisterType::B, 0xFF);
+
+        let conditional_operation = MicroOperation {
+            r#type: MicroOperationType::None,
+            cycles: 5,
+            source: None,
+            destination: None,
+            condition: Some(Condition::RegisterZero(RegisterType::B)),
+        };
+
+        cpu.work_queue.push_back(conditional_operation);
+
+        cpu.run(10);
+        assert_eq!(10, cpu.queued_cycles);
+        assert_eq!(0, cpu.work_queue.len());
     }
 }

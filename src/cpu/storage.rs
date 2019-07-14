@@ -72,6 +72,7 @@ impl RegisterPair {
 
 /// Represents individual Z80 status flags.
 #[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Flag {
     S = 0b1000_0000,
     Z = 0b0100_0000,
@@ -98,13 +99,31 @@ impl Flag {
 /// Represents a set of Z80 status flags as stored in a register.
 /// The backing data is a `Register` stored as a reference.
 pub struct FlagSet<'a> {
-    pub full: &'a mut Register,
+    pub full: &'a Register,
 }
 
 impl<'a> FlagSet<'a> {
     pub fn flag(&self, flag: Flag) -> bool {
         *self.full & (flag as u8) > 0
     }
+}
+
+impl<'a> From<&'a u8> for FlagSet<'a> {
+    fn from(value: &'a u8) -> Self {
+        FlagSet { full: value }
+    }
+}
+
+/// A mutable variant of `FlagSet`.
+pub struct FlagSetMut<'a> {
+    pub full: &'a mut Register,
+}
+
+impl<'a> FlagSetMut<'a> {
+    pub fn flag(&self, flag: Flag) -> bool {
+        *self.full & (flag as u8) > 0
+    }
+
     pub fn set_flag(&mut self, flag: Flag, on: bool) {
         *self.full = if on {
             *self.full | flag as u8
@@ -114,9 +133,9 @@ impl<'a> FlagSet<'a> {
     }
 }
 
-impl<'a> From<&'a mut u8> for FlagSet<'a> {
+impl<'a> From<&'a mut u8> for FlagSetMut<'a> {
     fn from(value: &'a mut u8) -> Self {
-        FlagSet { full: value }
+        FlagSetMut { full: value }
     }
 }
 
@@ -142,7 +161,11 @@ pub struct RegisterSet {
 }
 
 impl RegisterSet {
-    pub fn flags(&mut self) -> FlagSet {
+    pub fn flags(&self) -> FlagSet {
+        (&self.af.low).into()
+    }
+
+    pub fn flags_mut(&mut self) -> FlagSetMut {
         (&mut self.af.low).into()
     }
 
@@ -270,7 +293,7 @@ mod tests {
     #[test]
     fn set_disjoint_flags() {
         let mut flag_data = 0_u8;
-        let flags: FlagSet = (&mut flag_data).into();
+        let flags: FlagSetMut = (&mut flag_data).into();
         *flags.full = 0b10101010;
         assert_eq!(true, flags.flag(Flag::S));
         assert_eq!(false, flags.flag(Flag::Z));
@@ -285,7 +308,7 @@ mod tests {
     #[test]
     fn set_overlapping_flag() {
         let mut flag_data = 0_u8;
-        let mut flags: FlagSet = (&mut flag_data).into();
+        let mut flags: FlagSetMut = (&mut flag_data).into();
         flags.set_flag(Flag::PARITY, true);
         assert_eq!(Flag::OVERFLOW as u8, *flags.full);
     }
@@ -295,7 +318,7 @@ mod tests {
         let mut registers = RegisterSet::default();
         registers.write(RegisterType::F, 0xF0);
 
-        let mut flags = registers.flags();
+        let mut flags = registers.flags_mut();
         flags.set_flag(Flag::CARRY, true);
         assert_eq!(0xF0 | Flag::CARRY as u8, registers.af.low);
     }
