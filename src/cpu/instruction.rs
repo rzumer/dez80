@@ -6,11 +6,11 @@ use std::error::Error;
 use std::io::{Bytes, Read};
 
 macro_rules! instruction {
-    ($opcode: expr, $name: expr, $operations: expr) => {
+    ($opcode: expr, $name: expr, $( $operations: expr ),*) => {
         Instruction {
             opcode: $opcode as u32,
             name: $name,
-            operations: $operations,
+            operations: vec!($( $operations )*),
         }
     };
 }
@@ -52,16 +52,16 @@ impl Instruction {
             use RegisterType::*;
 
             let instruction = match opcode {
-                0x00 => instruction!(opcode, "NOP", vec!(NO_OP)),
+                0x00 => instruction!(opcode, "NOP", NO_OP),
                 0x01 => instruction!(
                     opcode,
                     "LD BC, (nn)",
-                    vec!(micro_op!(
+                    micro_op!(
                         Load,
                         10,
                         MemoryImmediate(next_word(bytes)?),
                         RegisterPair(BC)
-                    ))
+                    )
                 ),
                 _ => unimplemented!(),
             };
