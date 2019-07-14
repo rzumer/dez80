@@ -40,6 +40,17 @@ impl<'a> Instruction<'a> {
             return None;
         }
     }
+
+    /// Decodes a sequence of instructions, until the end of the stream or an error is reached.
+    pub fn decode_all<R: Read>(bytes: &mut Bytes<R>) -> Vec<Instruction> {
+        let mut instructions = Vec::new();
+
+        while let Some(instruction) = Instruction::decode(bytes) {
+            instructions.push(instruction);
+        }
+
+        instructions
+    }
 }
 
 #[cfg(test)]
@@ -50,5 +61,16 @@ mod tests {
     fn decode_instruction() {
         let nop = Instruction::decode(&mut [0x00].bytes());
         assert_eq!(Instruction::NOP, nop.unwrap());
+    }
+
+    #[test]
+    fn decode_instruction_sequence() {
+        let nop_opcodes = &mut [0x00, 0x00, 0x00].bytes();
+        let mut nop_sequence = Instruction::decode_all(nop_opcodes);
+        assert_eq!(3, nop_sequence.len());
+
+        while let Some(nop) = nop_sequence.pop() {
+            assert_eq!(Instruction::NOP, nop);
+        }
     }
 }
