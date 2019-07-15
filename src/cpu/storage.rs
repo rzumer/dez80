@@ -1,3 +1,16 @@
+use std::fmt;
+
+macro_rules! impl_display_register {
+    ($( $ident: ident ),*) => (
+        $( impl fmt::Display for $ident {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                // Write out the enum variant name, replacing underscores with straight quotes.
+                write!(f, "{}", format!("{:?}", self).replace("_", "'"))
+            }
+        } )*
+    );
+}
+
 /// Used to identify a single register in a manner
 /// independent of its representation in a `RegisterSet`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -42,6 +55,8 @@ pub enum RegisterPairType {
     DE_,
     HL_,
 }
+
+impl_display_register!(RegisterType, RegisterPairType);
 
 /// Represents a single-byte register.
 pub type Register = u8;

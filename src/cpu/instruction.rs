@@ -7,19 +7,17 @@ use std::fmt;
 use std::io::{Bytes, Read};
 
 macro_rules! instruction {
-    ($opcode: expr, $name: expr, $( $operations: expr ),*) => {
+    ($name: expr, $( $operations: expr ),*) => (
         Instruction {
-            opcode: u32::from($opcode),
-            name: $name,
+            name: String::from($name),
             operations: vec!($( $operations )*),
         }
-    };
+    );
 }
 
 /// Represents a single Z80 instruction (machine cycle granularity).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Instruction {
-    pub opcode: u32,
     pub name: String,
     pub operations: Vec<MicroOperation>,
 }
@@ -53,13 +51,12 @@ impl Instruction {
             use RegisterType::*;
 
             let instruction = match opcode {
-                0x00 => instruction!(opcode, "NOP".to_string(), NO_OP),
+                0x00 => instruction!("NOP", NO_OP),
                 0x01 => {
                     let operand = next_word(bytes)?;
 
                     instruction!(
-                        opcode,
-                        format!("LD BC, ({:04X})", operand.swap_bytes()),
+                        format!("LD {}, ({:04X})", BC, operand.swap_bytes()),
                         micro_op!(
                             Load,
                             10,
