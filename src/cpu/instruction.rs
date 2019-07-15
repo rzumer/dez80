@@ -4,8 +4,17 @@ use std::fmt;
 use std::io::{Bytes, Read};
 
 macro_rules! instruction {
+    ($type: expr) => {
+        Instruction::new($type, None, None)
+    };
+    ($type: expr, source: $source: expr) => {
+        Instruction::new($type, Some($source), None)
+    };
+    ($type: expr, destination: $destination: expr) => {
+        Instruction::new($type, None, Some($destination))
+    };
     ($type: expr, $source: expr, $destination: expr) => {
-        Instruction::new($type, $source, $destination)
+        Instruction::new($type, Some($source), Some($destination))
     };
 }
 
@@ -217,7 +226,7 @@ impl Instruction {
 
     /// Decodes a single instruction (opcode and operands).
     pub fn decode<R: Read>(reader: &mut R) -> Option<Self> {
-        let reader_bytes = &mut reader.bytes();
+        let bytes = &mut reader.bytes();
 
         /// Flattens the next byte in the stream to an `Option<u8>` value.
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
@@ -225,7 +234,13 @@ impl Instruction {
             bytes.next().and_then(|b| b.ok())
         }
 
-        if let Some(opcode) = next_byte(reader_bytes) {
+        /// Flattens the next two bytes in the stream to an `Option<u16>` value.
+        /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
+        fn next_doublet<R: Read>(bytes: &mut Bytes<R>) -> Option<u16> {
+            Some(u16::from_le_bytes([next_byte(bytes)?, next_byte(bytes)?]))
+        }
+
+        if let Some(opcode) = next_byte(bytes) {
             use InstructionType::*;
             use Operand::*;
             use RegisterPairType::*;
@@ -233,15 +248,12 @@ impl Instruction {
 
             let instruction = match opcode {
                 0x00 => Instruction::NOP,
-                0x01 => {
-                    let operand = [next_byte(reader_bytes)?, next_byte(reader_bytes)?];
-                    instruction!(
-                        Ld,
-                        Some(DoubletImmediate(u16::from_le_bytes(operand))),
-                        Some(RegisterPairImplied(BC))
-                    )
-                }
-                0x02 => instruction!(Ld, Some(RegisterImplied(A)), Some(MemoryIndirect(BC))),
+                0x01 => instruction!(
+                    Ld,
+                    DoubletImmediate(next_doublet(bytes)?),
+                    RegisterPairImplied(BC)
+                ),
+                0x02 => instruction!(Ld, RegisterImplied(A), MemoryIndirect(BC)),
                 _ => unimplemented!(),
             };
 
