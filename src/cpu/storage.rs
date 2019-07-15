@@ -77,11 +77,12 @@ impl RegisterPair {
     }
 
     pub fn full(self) -> u16 {
-        u16::from(self.high) << 8 | u16::from(self.low)
+        u16::from_be_bytes([self.high, self.low])
     }
     pub fn set_full(&mut self, value: u16) {
-        self.high = (value >> 8) as u8;
-        self.low = value as u8;
+        let bytes = value.to_be_bytes();
+        self.high = bytes[0];
+        self.low = bytes[1];
     }
 }
 
@@ -140,11 +141,7 @@ impl<'a> FlagSetMut<'a> {
     }
 
     pub fn set_flag(&mut self, flag: Flag, on: bool) {
-        *self.full = if on {
-            *self.full | flag as u8
-        } else {
-            *self.full & !(flag as u8)
-        }
+        *self.full = if on { *self.full | flag as u8 } else { *self.full & !(flag as u8) }
     }
 }
 

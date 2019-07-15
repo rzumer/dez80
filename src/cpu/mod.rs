@@ -5,6 +5,7 @@ mod storage;
 
 use micro_operation::{MicroOperation, MicroOperationType};
 use std::collections::VecDeque;
+use std::fmt;
 use storage::*;
 
 /// Represents a Z80 CPU in the NEC µPD780 family.
@@ -78,7 +79,8 @@ impl CPU {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use micro_operation::{Condition, NO_OP};
+    use instruction::Condition;
+    use micro_operation::NO_OP;
 
     #[test]
     fn queue_cycles() {
