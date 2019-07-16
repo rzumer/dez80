@@ -193,9 +193,6 @@ pub struct Instruction {
 }
 
 impl Instruction {
-    pub const NOP: Instruction =
-        Instruction { r#type: InstructionType::Nop, source: None, destination: None };
-
     fn new(r#type: InstructionType, source: Option<Operand>, destination: Option<Operand>) -> Self {
         Instruction { r#type, source, destination }
     }
@@ -247,7 +244,7 @@ impl Instruction {
             use RegisterType::*;
 
             let instruction = match opcode {
-                0x00 => Instruction::NOP,
+                0x00 => instruction!(Nop),
                 0x01 => instruction!(
                     Ld,
                     DoubletImmediate(next_doublet(bytes)?),
@@ -272,6 +269,12 @@ impl Instruction {
         }
 
         instructions
+    }
+}
+
+impl Default for Instruction {
+    fn default() -> Self {
+        Instruction::decode(&mut [0x00].as_ref()).unwrap()
     }
 }
 
@@ -303,13 +306,21 @@ mod tests {
 
     #[test]
     fn decode_instruction() {
+        let inc_b = Instruction::decode(&mut [0x04].as_ref()).unwrap();
+        assert_eq!(None, inc_b.source);
+        assert_eq!(Some(Operand::RegisterImplied(RegisterType::B)), inc_b.destination);
+        assert_eq!(InstructionType::Inc, inc_b.r#type);
+    }
+
+    #[test]
+    fn decode_instruction_default() {
         let nop = Instruction::decode(&mut [0x00].as_ref()).unwrap();
-        assert_eq!(Instruction::NOP, nop);
+        assert_eq!(Instruction::default(), nop);
     }
 
     #[test]
     fn decode_instruction_operation() {
-        let operation = Instruction::NOP.operations();
+        let operation = Instruction::default().operations();
         assert_eq!(1, operation.len());
         assert_eq!(NO_OP, operation[0]);
     }
@@ -328,7 +339,7 @@ mod tests {
         assert_eq!(3, nop_sequence.len());
 
         while let Some(nop) = nop_sequence.pop() {
-            assert_eq!(Instruction::NOP, nop);
+            assert_eq!(Instruction::default(), nop);
         }
     }
 }
