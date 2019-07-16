@@ -208,15 +208,48 @@ impl Instruction {
             };
         }
 
+        let operands = (self.source, self.destination);
+
         return match self.r#type {
-            Ld => match (self.source, self.destination) {
-                (Some(DoubletImmediate(_)), Some(RegisterPairImplied(_))) => {
-                    single_operation!(Load, 10)
-                }
-                (Some(RegisterImplied(_)), Some(MemoryIndirect(_))) => single_operation!(Load, 7),
-                _ => unimplemented!(),
-            },
+            InstructionType::Add => {
+                let cycles = match operands {
+                    (Some(RegisterImplied(_)), Some(RegisterImplied(_))) => 4,
+                    (Some(MemoryIndirect(_)), Some(RegisterImplied(_))) => 7,
+                    (Some(RegisterPairImplied(_)), Some(RegisterPairImplied(_))) => 11,
+                    _ => unimplemented!(),
+                };
+                single_operation!(MicroOperationType::Add, cycles)
+            }
+            Dec => {
+                let cycles = match self.destination {
+                    Some(RegisterImplied(_)) => 4,
+                    Some(RegisterPairImplied(_)) => 6,
+                    _ => unimplemented!(),
+                };
+                single_operation!(Decrement, cycles)
+            }
+            Ex => single_operation!(Exchange, 4),
+            Inc => {
+                let cycles = match self.destination {
+                    Some(RegisterImplied(_)) => 4,
+                    Some(RegisterPairImplied(_)) => 6,
+                    _ => unimplemented!(),
+                };
+                single_operation!(Increment, cycles)
+            }
+            Ld => {
+                let cycles = match operands {
+                    (Some(DoubletImmediate(_)), Some(RegisterPairImplied(_))) => 10,
+                    (Some(RegisterImplied(_)), Some(MemoryIndirect(_)))
+                    | (Some(MemoryIndirect(_)), Some(RegisterImplied(_)))
+                    | (Some(OctetImmediate(_)), Some(RegisterImplied(_))) => 7,
+                    _ => unimplemented!(),
+                };
+                single_operation!(Load, cycles)
+            }
             Nop => vec![NO_OP],
+            Rlca => single_operation!(RotateLeftThroughCarry, 4),
+            Rrca => single_operation!(RotateRightThroughCarry, 4),
             _ => unimplemented!(),
         };
     }
@@ -251,6 +284,19 @@ impl Instruction {
                     RegisterPairImplied(BC)
                 ),
                 0x02 => instruction!(Ld, RegisterImplied(A), MemoryIndirect(BC)),
+                0x03 => instruction!(Inc, destination: RegisterPairImplied(BC)),
+                0x04 => instruction!(Inc, destination: RegisterImplied(B)),
+                0x05 => instruction!(Dec, destination: RegisterImplied(B)),
+                0x06 => instruction!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(B)),
+                0x07 => instruction!(Rlca),
+                0x08 => instruction!(Ex, RegisterPairImplied(AF_), RegisterPairImplied(AF)),
+                0x09 => instruction!(Add, RegisterPairImplied(BC), RegisterPairImplied(HL)),
+                0x0A => instruction!(Ld, MemoryIndirect(BC), RegisterImplied(A)),
+                0x0B => instruction!(Dec, destination: RegisterPairImplied(BC)),
+                0x0C => instruction!(Inc, destination: RegisterImplied(C)),
+                0x0D => instruction!(Dec, destination: RegisterImplied(C)),
+                0x0E => instruction!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(C)),
+                0x0F => instruction!(Rrca),
                 _ => unimplemented!(),
             };
 

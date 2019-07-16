@@ -37,8 +37,15 @@ pub const NO_OP: MicroOperation = micro_op!(MicroOperationType::NoOperation, 4);
 /// CPU's execution strategy.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MicroOperationType {
-    NoOperation,
+    Add,
+    Decrement,
+    Exchange,
+    Increment,
     Load,
+    NoOperation,
+    RotateLeftThroughCarry,
+    RotateRightThroughCarry,
+    Subtract,
 }
 
 /// Represents a unit of operation no larger in scope than an instruction
