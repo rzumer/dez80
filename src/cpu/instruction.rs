@@ -197,7 +197,7 @@ impl Instruction {
         Instruction { r#type, source, destination }
     }
 
-    fn operations(&self) -> Vec<MicroOperation> {
+    pub fn operations(&self) -> Vec<MicroOperation> {
         use InstructionType::*;
         use MicroOperationType::*;
         use Operand::*;

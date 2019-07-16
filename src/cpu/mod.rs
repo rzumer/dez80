@@ -1,11 +1,10 @@
 #[macro_use]
-mod micro_operation;
-mod instruction;
-mod storage;
+pub mod micro_operation;
+pub mod instruction;
+pub mod storage;
 
 use micro_operation::{MicroOperation, MicroOperationType};
 use std::collections::VecDeque;
-use std::fmt;
 use storage::*;
 
 /// Represents a Z80 CPU in the NEC µPD780 family.
