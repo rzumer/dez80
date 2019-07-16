@@ -30,6 +30,17 @@ macro_rules! micro_op {
     };
 }
 
+/// Defines a micro-operation matching the `NOP` instruction.
+pub const NO_OP: MicroOperation = micro_op!(MicroOperationType::NoOperation, 4);
+
+/// Represents a type of micro-operation that informs the
+/// CPU's execution strategy.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum MicroOperationType {
+    NoOperation,
+    Load,
+}
+
 /// Represents a unit of operation no larger in scope than an instruction
 /// or machine cycle, and which can be smaller.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -41,13 +52,8 @@ pub struct MicroOperation {
     pub condition: Option<Condition>,
 }
 
-/// Represents a type of micro-operation that informs the
-/// CPU's execution strategy.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum MicroOperationType {
-    NoOperation,
-    Load,
+impl Default for MicroOperation {
+    fn default() -> Self {
+        NO_OP
+    }
 }
-
-/// Defines a micro-operation matching the `NOP` instruction.
-pub const NO_OP: MicroOperation = micro_op!(MicroOperationType::NoOperation, 4);
