@@ -359,6 +359,12 @@ mod tests {
     }
 
     #[test]
+    fn decode_incomplete_instruction() {
+        let ld_b = Instruction::decode(&mut [0x06].as_ref());
+        assert_eq!(None, ld_b);
+    }
+
+    #[test]
     fn decode_instruction_default() {
         let nop = Instruction::decode(&mut [0x00].as_ref()).unwrap();
         assert_eq!(Instruction::default(), nop);
@@ -366,25 +372,37 @@ mod tests {
 
     #[test]
     fn decode_instruction_operation() {
-        let operation = Instruction::default().operations();
-        assert_eq!(1, operation.len());
-        assert_eq!(NO_OP, operation[0]);
+        let nop_operations = Instruction::default().operations();
+        assert_eq!(1, nop_operations.len());
+        assert_eq!(NO_OP, nop_operations[0]);
     }
 
     #[test]
     fn display_instruction() {
-        let instruction_bytes = &mut [0x01, 0xF0, 0x0F].as_ref();
-        let instruction = Instruction::decode(instruction_bytes).unwrap();
-        assert_eq!("LD BC, 0ff0", instruction.to_string());
+        let ld_bc_bytes = &mut [0x01, 0xF0, 0x0F].as_ref();
+        let ld_bc = Instruction::decode(ld_bc_bytes).unwrap();
+        assert_eq!("LD BC, 0ff0", ld_bc.to_string());
     }
 
     #[test]
     fn decode_instruction_sequence() {
-        let nop_opcodes = &mut [0x00, 0x00, 0x00].as_ref();
-        let mut nop_sequence = Instruction::decode_all(nop_opcodes);
+        let nop_sequence_bytes = &mut [0x00, 0x00, 0x00].as_ref();
+        let mut nop_sequence = Instruction::decode_all(nop_sequence_bytes);
         assert_eq!(3, nop_sequence.len());
 
         while let Some(nop) = nop_sequence.pop() {
+            assert_eq!(Instruction::default(), nop);
+        }
+    }
+
+    #[test]
+    fn decode_incomplete_instruction_sequence() {
+        let instruction_sequence_bytes = &mut [0x00, 0x00, 0x06].as_ref();
+        let mut instruction_sequence = Instruction::decode_all(instruction_sequence_bytes);
+
+        assert_eq!(2, instruction_sequence.len());
+
+        while let Some(nop) = instruction_sequence.pop() {
             assert_eq!(Instruction::default(), nop);
         }
     }
