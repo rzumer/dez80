@@ -3,9 +3,9 @@ extern crate clap;
 extern crate rayon;
 
 use clap::{App, Arg};
+use dez80::Instruction;
 #[cfg(feature = "rayon")]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use rz80::Instruction;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 

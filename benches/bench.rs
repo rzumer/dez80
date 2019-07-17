@@ -2,8 +2,8 @@
 extern crate criterion;
 
 use criterion::{Bencher, Criterion, Fun};
+use dez80::{Instruction, MicroOperation};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use rz80::{Instruction, MicroOperation};
 
 const INSTRUCTION_STREAM: &[u8] = &[
     0x00, // NOP
