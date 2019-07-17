@@ -164,19 +164,19 @@ impl fmt::Display for Operand {
         use Operand::*;
 
         match self {
-            OctetImmediate(val) => write!(f, "{:02x}", val),
-            DoubletImmediate(val) => write!(f, "{:04x}", val),
+            OctetImmediate(val) => write!(f, "0x{:02x}", val),
+            DoubletImmediate(val) => write!(f, "0x{:04x}", val),
             RegisterImplied(reg) => write!(f, "{}", reg),
             RegisterPairImplied(reg) => write!(f, "{}", reg),
             RegisterBitImplied(reg, bit) => write!(f, "{}, {}", bit, reg),
-            MemoryDirect(val) => write!(f, "({:04x})", val.to_le()),
-            MemoryRelative(val) => write!(f, "{:02x}", val),
+            MemoryDirect(val) => write!(f, "(0x{:04x})", val.to_le()),
+            MemoryRelative(val) => write!(f, "0x{:02x}", val),
             MemoryIndirect(reg) => write!(f, "({})", reg),
-            MemoryIndexed(reg, idx) => write!(f, "({} + {:02x})", reg, idx),
-            MemoryZeroPage(val) => write!(f, "{:02x}", val),
+            MemoryIndexed(reg, idx) => write!(f, "({} + 0x{:02x})", reg, idx),
+            MemoryZeroPage(val) => write!(f, "0x{:02x}", val),
             MemoryBitIndirect(reg, bit) => write!(f, "{}, ({})", bit, reg),
-            MemoryBitIndexed(reg, idx, bit) => write!(f, "{}, ({} + {:02x})", bit, reg, idx),
-            PortDirect(val) => write!(f, "({:02x})", val),
+            MemoryBitIndexed(reg, idx, bit) => write!(f, "{}, ({} + 0x{:02x})", bit, reg, idx),
+            PortDirect(val) => write!(f, "(0x{:02x})", val),
             PortIndirect(reg) => write!(f, "({})", reg),
         }
     }
