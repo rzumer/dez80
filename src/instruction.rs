@@ -191,9 +191,7 @@ impl Instruction {
     }
 
     /// Decodes a single instruction (opcode and operands).
-    pub fn decode<R: Read>(reader: &mut R) -> Option<Self> {
-        let bytes = &mut reader.bytes();
-
+    fn decode<R: Read>(bytes: &mut Bytes<R>) -> Option<Self> {
         /// Flattens the next byte in the stream to an `Option<u8>` value.
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
         fn next_byte<R: Read>(bytes: &mut Bytes<R>) -> Option<u8> {
@@ -243,10 +241,11 @@ impl Instruction {
     }
 
     /// Decodes a sequence of instructions, until the end of the stream or an error is reached.
-    pub fn decode_all<R: Read>(reader: &mut R) -> Vec<Instruction> {
+    pub fn from_bytes<R: Read>(reader: &mut R) -> Vec<Instruction> {
+        let mut bytes = reader.bytes();
         let mut instructions = Vec::new();
 
-        while let Some(instruction) = Instruction::decode(reader) {
+        while let Some(instruction) = Instruction::decode(&mut bytes) {
             instructions.push(instruction);
         }
 
@@ -256,7 +255,7 @@ impl Instruction {
 
 impl Default for Instruction {
     fn default() -> Self {
-        Instruction::decode(&mut [0x00].as_ref()).unwrap()
+        Instruction::decode(&mut [0x00].bytes()).unwrap()
     }
 }
 
@@ -286,7 +285,7 @@ mod tests {
 
     #[test]
     fn decode_instruction() {
-        let inc_b = Instruction::decode(&mut [0x04].as_ref()).unwrap();
+        let inc_b = Instruction::decode(&mut [0x04].bytes()).unwrap();
         assert_eq!(None, inc_b.source);
         assert_eq!(Some(Operand::RegisterImplied(RegisterType::B)), inc_b.destination);
         assert_eq!(InstructionType::Inc, inc_b.r#type);
@@ -294,13 +293,13 @@ mod tests {
 
     #[test]
     fn decode_incomplete_instruction() {
-        let ld_b = Instruction::decode(&mut [0x06].as_ref());
+        let ld_b = Instruction::decode(&mut [0x06].bytes());
         assert_eq!(None, ld_b);
     }
 
     #[test]
     fn decode_instruction_default() {
-        let nop = Instruction::decode(&mut [0x00].as_ref()).unwrap();
+        let nop = Instruction::decode(&mut [0x00].bytes()).unwrap();
         assert_eq!(Instruction::default(), nop);
     }
 
@@ -313,7 +312,7 @@ mod tests {
 
     #[test]
     fn display_instruction() {
-        let ld_bc_bytes = &mut [0x01, 0xF0, 0x0F].as_ref();
+        let ld_bc_bytes = &mut [0x01, 0xF0, 0x0F].bytes();
         let ld_bc = Instruction::decode(ld_bc_bytes).unwrap();
         assert_eq!("LD BC, 0ff0", ld_bc.to_string());
     }
@@ -321,7 +320,7 @@ mod tests {
     #[test]
     fn decode_instruction_sequence() {
         let nop_sequence_bytes = &mut [0x00, 0x00, 0x00].as_ref();
-        let mut nop_sequence = Instruction::decode_all(nop_sequence_bytes);
+        let mut nop_sequence = Instruction::from_bytes(nop_sequence_bytes);
         assert_eq!(3, nop_sequence.len());
 
         while let Some(nop) = nop_sequence.pop() {
@@ -332,7 +331,7 @@ mod tests {
     #[test]
     fn decode_incomplete_instruction_sequence() {
         let instruction_sequence_bytes = &mut [0x00, 0x00, 0x06].as_ref();
-        let mut instruction_sequence = Instruction::decode_all(instruction_sequence_bytes);
+        let mut instruction_sequence = Instruction::from_bytes(instruction_sequence_bytes);
 
         assert_eq!(2, instruction_sequence.len());
 

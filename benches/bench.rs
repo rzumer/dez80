@@ -18,7 +18,7 @@ const INSTRUCTION_STREAM: &[u8] = &[
 
 fn bench_instruction_decode_all(c: &mut Criterion) {
     c.bench_function("Instruction::decode_all", |b| {
-        b.iter(|| Instruction::decode_all(&mut INSTRUCTION_STREAM))
+        b.iter(|| Instruction::from_bytes(&mut INSTRUCTION_STREAM))
     });
 }
 
@@ -37,7 +37,7 @@ fn bench_instruction_operations(c: &mut Criterion) {
     let parallel_operations = Fun::new("Parallel", bench_parallel);
 
     let funs = vec![sequential_operations, parallel_operations];
-    let mut instructions = Instruction::decode_all(&mut INSTRUCTION_STREAM);
+    let mut instructions = Instruction::from_bytes(&mut INSTRUCTION_STREAM);
 
     while instructions.len() < 1024 {
         instructions.append(&mut instructions.clone());
@@ -59,7 +59,7 @@ fn bench_instruction_to_string(c: &mut Criterion) {
     let parallel_operations = Fun::new("Parallel", bench_parallel);
 
     let funs = vec![sequential_operations, parallel_operations];
-    let mut instructions = Instruction::decode_all(&mut INSTRUCTION_STREAM);
+    let mut instructions = Instruction::from_bytes(&mut INSTRUCTION_STREAM);
 
     while instructions.len() < 1024 {
         instructions.append(&mut instructions.clone());
