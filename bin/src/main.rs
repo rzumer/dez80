@@ -19,6 +19,7 @@ fn main() -> Result<(), std::io::Error> {
     let matches = App::new(cargo_env!("NAME"))
         .version(cargo_env!("VERSION"))
         .author(cargo_env!("AUTHORS"))
+        .about(cargo_env!("DESCRIPTION"))
         .arg(
             Arg::with_name("input")
                 .short("i")
