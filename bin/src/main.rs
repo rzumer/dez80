@@ -1,7 +1,9 @@
 extern crate clap;
+#[cfg(feature = "rayon")]
 extern crate rayon;
 
 use clap::{App, Arg};
+#[cfg(feature = "rayon")]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rz80::Instruction;
 use std::fs::File;
@@ -43,8 +45,11 @@ fn main() -> Result<(), std::io::Error> {
     let instructions = Instruction::from_bytes(&mut reader);
 
     // Format decoded instructions to their mnemonic representations.
+    #[cfg(feature = "rayon")]
     let formatted =
         instructions.par_iter().map(|i| i.to_string()).collect::<Vec<String>>().join("\n");
+    #[cfg(not(feature = "rayon"))]
+    let formatted = instructions.iter().map(|i| i.to_string()).collect::<Vec<String>>().join("\n");
 
     // Write out the mnemonics to file or standard output.
     if let Some(output_path) = matches.value_of("output") {
