@@ -163,28 +163,26 @@ impl fmt::Display for Operand {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Operand::*;
 
-        let formatted = match self {
-            OctetImmediate(val) => format!("{:02x}", val),
-            DoubletImmediate(val) => format!("{:04x}", val),
-            RegisterImplied(reg) => format!("{}", reg),
-            RegisterPairImplied(reg) => format!("{}", reg),
-            RegisterBitImplied(reg, bit) => format!("{}, {}", bit, reg),
-            MemoryDirect(val) => format!("({:04x})", val.to_le()),
-            MemoryRelative(val) => format!("{:02x}", val),
-            MemoryIndirect(reg) => format!("({})", reg),
-            MemoryIndexed(reg, idx) => format!("({} + {:02x})", reg, idx),
-            MemoryZeroPage(val) => format!("{:02x}", val),
-            MemoryBitIndirect(reg, bit) => format!("{}, ({})", bit, reg),
-            MemoryBitIndexed(reg, idx, bit) => format!("{}, ({} + {:02x})", bit, reg, idx),
-            PortDirect(val) => format!("({:02x})", val),
-            PortIndirect(reg) => format!("({})", reg),
-        };
-
-        write!(f, "{}", formatted)
+        match self {
+            OctetImmediate(val) => write!(f, "{:02x}", val),
+            DoubletImmediate(val) => write!(f, "{:04x}", val),
+            RegisterImplied(reg) => write!(f, "{}", reg),
+            RegisterPairImplied(reg) => write!(f, "{}", reg),
+            RegisterBitImplied(reg, bit) => write!(f, "{}, {}", bit, reg),
+            MemoryDirect(val) => write!(f, "({:04x})", val.to_le()),
+            MemoryRelative(val) => write!(f, "{:02x}", val),
+            MemoryIndirect(reg) => write!(f, "({})", reg),
+            MemoryIndexed(reg, idx) => write!(f, "({} + {:02x})", reg, idx),
+            MemoryZeroPage(val) => write!(f, "{:02x}", val),
+            MemoryBitIndirect(reg, bit) => write!(f, "{}, ({})", bit, reg),
+            MemoryBitIndexed(reg, idx, bit) => write!(f, "{}, ({} + {:02x})", bit, reg, idx),
+            PortDirect(val) => write!(f, "({:02x})", val),
+            PortIndirect(reg) => write!(f, "({})", reg),
+        }
     }
 }
 
-/// Represents a single Z80 instruction (machine cycle granularity).
+/// Represents a single Z80 instruction with machine cycle granularity.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Instruction {
     pub r#type: InstructionType,
@@ -197,6 +195,8 @@ impl Instruction {
         Instruction { r#type, source, destination }
     }
 
+    /// Breaks down an instruction into a sequence of micro-operations
+    /// providing data relevant to their execution.
     pub fn operations(&self) -> Vec<MicroOperation> {
         use InstructionType::*;
         use MicroOperationType::*;
@@ -329,20 +329,18 @@ impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use InstructionType::*;
 
-        let formatted = match (self.source, self.destination) {
-            (Some(src), Some(dst)) => format!("{} {}, {}", self.r#type, dst, src),
+        match (self.source, self.destination) {
+            (Some(src), Some(dst)) => write!(f, "{} {}, {}", self.r#type, dst, src),
             (Some(operand), None) | (None, Some(operand)) => match self.r#type {
                 // Conditional instructions are written with a separator
                 // between the condition and the operand.
                 Call(Some(_)) | Jp(Some(_)) | Jr(Some(_)) | Ret(Some(_)) => {
-                    format!("{}, {}", self.r#type, operand)
+                    write!(f, "{}, {}", self.r#type, operand)
                 }
-                _ => format!("{} {}", self.r#type, operand),
+                _ => write!(f, "{} {}", self.r#type, operand),
             },
-            (None, None) => format!("{}", self.r#type),
-        };
-
-        write!(f, "{}", formatted)
+            (None, None) => write!(f, "{}", self.r#type),
+        }
     }
 }
 
