@@ -2,9 +2,8 @@
 extern crate criterion;
 
 use criterion::{Bencher, Criterion, Fun};
-use hachiya::cpu::instruction::Instruction;
-use hachiya::cpu::micro_operation::MicroOperation;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rz80::{Instruction, MicroOperation};
 
 const INSTRUCTION_STREAM: &[u8] = &[
     0x00, // NOP

@@ -1,15 +1,9 @@
 [package]
-name = "rz80"
+name = "rz80_cli"
 version = "0.1.0"
 authors = ["Raphaël Zumer <rzumer@tebako.net>"]
 edition = "2018"
 
 [dependencies]
-
-[dev-dependencies]
-criterion = "0.2"
+rz80 = { version = "0.1", path = "../" }
 rayon = "1.1"
-
-[[bench]]
-name = "bench"
-harness = false

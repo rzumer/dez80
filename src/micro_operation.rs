@@ -1,4 +1,4 @@
-use super::instruction::{Condition, Operand};
+use crate::common::{Condition, Operand};
 
 macro_rules! micro_op {
     ($type: expr, $cycles: expr, $source: expr, $destination: expr, $condition: expr) => {
