@@ -34,7 +34,8 @@ fn main() -> Result<(), std::io::Error> {
                 .short("o")
                 .long("output")
                 .value_name("OUTPUT_FILE")
-                .help("The output file in which to dump the assembly code"),
+                .help("The output file in which to dump the assembly code")
+                .index(2),
         )
         .get_matches();
 
