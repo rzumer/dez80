@@ -1,6 +1,6 @@
 use crate::common::{Condition, Operand};
 use crate::micro_operation::*;
-use crate::storage::*;
+use crate::register::*;
 use std::fmt;
 use std::io::{Bytes, Read};
 

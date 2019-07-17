@@ -1,4 +1,4 @@
-use crate::storage::*;
+use crate::register::*;
 use std::fmt;
 
 /// Represents a condition that must be true for a micro-operation to run.
@@ -8,17 +8,6 @@ pub enum Condition {
     FlagNotSet(Flag),
     RegisterZero(RegisterType),
     RegisterPairZero(RegisterPairType),
-}
-
-impl Condition {
-    pub fn evaluate(self, registers: &RegisterSet) -> bool {
-        match self {
-            Condition::FlagSet(f) => registers.flags().flag(f),
-            Condition::FlagNotSet(f) => !registers.flags().flag(f),
-            Condition::RegisterZero(r) => registers.read(r) == 0,
-            Condition::RegisterPairZero(r) => registers.read_pair(r) == 0,
-        }
-    }
 }
 
 /// Represents a target for data operations.
