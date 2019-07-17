@@ -1,5 +1,5 @@
 use crate::common::{Condition, Operand};
-use crate::micro_operation::*;
+use crate::operation::*;
 use crate::register::*;
 use std::fmt;
 use std::io::{Bytes, Read};
@@ -131,16 +131,16 @@ impl Instruction {
         Instruction { r#type, source, destination }
     }
 
-    /// Breaks down an instruction into a sequence of micro-operations
+    /// Breaks down an instruction into a sequence of operations
     /// providing data relevant to their execution.
-    pub fn operations(&self) -> Vec<MicroOperation> {
+    pub fn operations(&self) -> Vec<Operation> {
         use InstructionType::*;
-        use MicroOperationType::*;
         use Operand::*;
+        use OperationType::*;
 
         macro_rules! single_operation {
             ($type: expr, $cycles: expr) => {
-                vec![micro_op!($type, $cycles, self.source, self.destination)]
+                vec![operation!($type, $cycles, self.source, self.destination)]
             };
         }
 
@@ -154,7 +154,7 @@ impl Instruction {
                     (Some(RegisterPairImplied(_)), Some(RegisterPairImplied(_))) => 11,
                     _ => unimplemented!(),
                 };
-                single_operation!(MicroOperationType::Add, cycles)
+                single_operation!(OperationType::Add, cycles)
             }
             Dec => {
                 let cycles = match self.destination {

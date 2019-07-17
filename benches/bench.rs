@@ -2,7 +2,7 @@
 extern crate criterion;
 
 use criterion::{Bencher, Criterion, Fun};
-use dez80::{Instruction, MicroOperation};
+use dez80::{Instruction, Operation};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 const INSTRUCTION_STREAM: &[u8] = &[
@@ -24,13 +24,11 @@ fn bench_instruction_decode_all(c: &mut Criterion) {
 
 fn bench_instruction_operations(c: &mut Criterion) {
     fn bench_sequential(b: &mut Bencher, instructions: &Vec<Instruction>) {
-        b.iter(|| instructions.iter().flat_map(|i| i.operations()).collect::<Vec<MicroOperation>>())
+        b.iter(|| instructions.iter().flat_map(|i| i.operations()).collect::<Vec<Operation>>())
     }
 
     fn bench_parallel(b: &mut Bencher, instructions: &Vec<Instruction>) {
-        b.iter(|| {
-            instructions.par_iter().flat_map(|i| i.operations()).collect::<Vec<MicroOperation>>()
-        })
+        b.iter(|| instructions.par_iter().flat_map(|i| i.operations()).collect::<Vec<Operation>>())
     }
 
     let sequential_operations = Fun::new("Sequential", bench_sequential);

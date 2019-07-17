@@ -1,7 +1,7 @@
 use crate::register::*;
 use std::fmt;
 
-/// Represents a condition that must be true for a micro-operation to run.
+/// Represents a condition that must be true for an operation to run.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Condition {
     FlagSet(Flag),

@@ -1,8 +1,8 @@
 use crate::common::{Condition, Operand};
 
-macro_rules! micro_op {
+macro_rules! operation {
     ($type: expr, $cycles: expr, $source: expr, $destination: expr, $condition: expr) => {
-        MicroOperation {
+        Operation {
             r#type: $type,
             cycles: $cycles,
             source: Some($source),
@@ -11,7 +11,7 @@ macro_rules! micro_op {
         }
     };
     ($type: expr, $cycles: expr, $source: expr, $destination: expr) => {
-        MicroOperation {
+        Operation {
             r#type: $type,
             cycles: $cycles,
             source: $source,
@@ -20,7 +20,7 @@ macro_rules! micro_op {
         }
     };
     ($type: expr, $cycles: expr) => {
-        MicroOperation {
+        Operation {
             r#type: $type,
             cycles: $cycles,
             source: None,
@@ -30,13 +30,12 @@ macro_rules! micro_op {
     };
 }
 
-/// Defines a micro-operation matching the `NOP` instruction.
-pub const NO_OP: MicroOperation = micro_op!(MicroOperationType::NoOperation, 4);
+/// Defines an operation matching the `NOP` instruction.
+pub const NO_OP: Operation = operation!(OperationType::NoOperation, 4);
 
-/// Represents a type of micro-operation that informs the
-/// CPU's execution strategy.
+/// Represents a type of operation that informs the CPU's execution strategy.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum MicroOperationType {
+pub enum OperationType {
     Add,
     Decrement,
     Exchange,
@@ -51,15 +50,15 @@ pub enum MicroOperationType {
 /// Represents a unit of operation no larger in scope than an instruction
 /// or machine cycle, and which can be smaller.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct MicroOperation {
-    pub r#type: MicroOperationType,
+pub struct Operation {
+    pub r#type: OperationType,
     pub cycles: usize,
     pub source: Option<Operand>,
     pub destination: Option<Operand>,
     pub condition: Option<Condition>,
 }
 
-impl Default for MicroOperation {
+impl Default for Operation {
     fn default() -> Self {
         NO_OP
     }
