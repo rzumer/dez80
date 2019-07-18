@@ -210,6 +210,7 @@ impl Instruction {
             use RegisterPairType::*;
             use RegisterType::*;
 
+            #[rustfmt::skip]
             let instruction = match opcode {
                 0x00 => instruction!(Nop),
                 0x01 => instruction!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(BC)),
