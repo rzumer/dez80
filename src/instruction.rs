@@ -212,11 +212,7 @@ impl Instruction {
 
             let instruction = match opcode {
                 0x00 => instruction!(Nop),
-                0x01 => instruction!(
-                    Ld,
-                    DoubletImmediate(next_doublet(bytes)?),
-                    RegisterPairImplied(BC)
-                ),
+                0x01 => instruction!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(BC)),
                 0x02 => instruction!(Ld, RegisterImplied(A), MemoryIndirect(BC)),
                 0x03 => instruction!(Inc, destination: RegisterPairImplied(BC)),
                 0x04 => instruction!(Inc, destination: RegisterImplied(B)),

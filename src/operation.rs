@@ -20,13 +20,7 @@ macro_rules! operation {
         }
     };
     ($type: expr, $cycles: expr) => {
-        Operation {
-            r#type: $type,
-            cycles: $cycles,
-            source: None,
-            destination: None,
-            condition: None,
-        }
+        Operation { r#type: $type, cycles: $cycles, source: None, destination: None, condition: None }
     };
 }
 
