@@ -1,0 +1,13 @@
+language: rust
+env:
+  - cd $TRAVIS_BUILD_DIR/
+  - cd $TRAVIS_BUILD_DIR/bin/
+before_script:
+  - rustup component add clippy
+  - rustup component add rustfmt
+script:
+  - cargo fmt --all -- --check
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo build
+  - cargo test
+  - cargo bench --no-run
