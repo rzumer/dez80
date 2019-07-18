@@ -146,7 +146,7 @@ impl Instruction {
 
         let operands = (self.source, self.destination);
 
-        return match self.r#type {
+        match self.r#type {
             InstructionType::Add => {
                 let cycles = match operands {
                     (Some(RegisterImplied(_)), Some(RegisterImplied(_))) => 4,
@@ -187,7 +187,7 @@ impl Instruction {
             Rlca => single_operation!(RotateLeftThroughCarry, 4),
             Rrca => single_operation!(RotateRightThroughCarry, 4),
             _ => unimplemented!(),
-        };
+        }
     }
 
     /// Decodes a single instruction (opcode and operands).
