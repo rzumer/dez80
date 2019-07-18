@@ -310,7 +310,7 @@ mod tests {
     fn display_instruction() {
         let ld_bc_bytes = &mut [0x01, 0xF0, 0x0F].bytes();
         let ld_bc = Instruction::decode(ld_bc_bytes).unwrap();
-        assert_eq!("LD BC, 0ff0", ld_bc.to_string());
+        assert_eq!("LD BC, 0x0ff0", ld_bc.to_string());
     }
 
     #[test]
