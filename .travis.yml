@@ -2,9 +2,8 @@ language: rust
 matrix:
   include:
     - name: "DeZ80"
-      env: cd $TRAVIS_BUILD_DIR/
     - name: "DeZ80 CLI"
-      env: cd $TRAVIS_BUILD_DIR/bin/
+      before_install: cd bin/
 before_script:
   - rustup component add clippy
   - rustup component add rustfmt
