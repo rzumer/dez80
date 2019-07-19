@@ -59,6 +59,7 @@ pub enum InstructionType {
     Nop,
     Or,
     Otdr,
+    Otir,
     Out,
     Outd,
     Outi,
@@ -452,6 +453,88 @@ impl Instruction {
             0xEB => instruction!(Ex, RegisterPairImplied(HL), RegisterPairImplied(DE)),
             0xEC => instruction!(Call(Some(FlagNotSet(Flag::PV))), source: DoubletImmediate(next_doublet(bytes)?)),
             0xED => match next_byte(bytes)? {
+                // 0x00 ~ 0x3F
+                0x40 => instruction!(In, PortIndirect(C), RegisterImplied(B)),
+                0x41 => instruction!(Out, RegisterImplied(B), PortIndirect(C)),
+                0x42 => instruction!(Sbc, RegisterPairImplied(BC), RegisterPairImplied(HL)),
+                0x43 => instruction!(Ld, RegisterPairImplied(BC), MemoryDirect(next_doublet(bytes)?)),
+                0x44 => instruction!(Neg),
+                0x45 => instruction!(Retn),
+                0x46 => instruction!(Im(0)),
+                0x47 => instruction!(Ld, RegisterImplied(A), RegisterImplied(I)),
+                0x48 => instruction!(In, PortIndirect(C), RegisterImplied(C)),
+                0x49 => instruction!(Out, RegisterImplied(C), PortIndirect(C)),
+                0x4A => instruction!(Adc, RegisterPairImplied(BC), RegisterPairImplied(HL)),
+                0x4B => instruction!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(BC)),
+                // 0x4C
+                0x4D => instruction!(Reti),
+                // 0x4E
+                0x4F => instruction!(Ld, RegisterImplied(A), RegisterImplied(R)),
+                0x50 => instruction!(In, PortIndirect(C), RegisterImplied(D)),
+                0x51 => instruction!(Out, RegisterImplied(D), PortIndirect(C)),
+                0x52 => instruction!(Sbc, RegisterPairImplied(DE), RegisterPairImplied(HL)),
+                0x53 => instruction!(Ld, RegisterPairImplied(DE), MemoryDirect(next_doublet(bytes)?)),
+                // 0x54
+                0x55 => instruction!(Retn),
+                0x56 => instruction!(Im(1)),
+                0x57 => instruction!(Ld, RegisterImplied(I), RegisterImplied(A)),
+                0x58 => instruction!(In, PortIndirect(C), RegisterImplied(E)),
+                0x59 => instruction!(Out, RegisterImplied(E), PortIndirect(C)),
+                0x5A => instruction!(Adc, RegisterPairImplied(DE), RegisterPairImplied(HL)),
+                0x5B => instruction!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(DE)),
+                // 0x5C
+                0x5D => instruction!(Retn),
+                0x5E => instruction!(Im(2)),
+                0x5F => instruction!(Ld, RegisterImplied(R), RegisterImplied(A)),
+                0x60 => instruction!(In, PortIndirect(C), RegisterImplied(H)),
+                0x61 => instruction!(Out, RegisterImplied(H), PortIndirect(C)),
+                0x62 => instruction!(Sbc, RegisterPairImplied(HL), RegisterPairImplied(HL)),
+                // 0x63 ~ 0x64
+                0x65 => instruction!(Retn),
+                0x66 => instruction!(Im(0)),
+                0x67 => instruction!(Rrd),
+                0x68 => instruction!(In, PortIndirect(C), RegisterImplied(L)),
+                0x69 => instruction!(Out, RegisterImplied(L), PortIndirect(C)),
+                0x6A => instruction!(Adc, RegisterPairImplied(HL), RegisterPairImplied(HL)),
+                // 0x6B ~ 0x6C
+                0x6D => instruction!(Retn),
+                // 0x6E
+                0x6F => instruction!(Rld),
+                // 0x70 ~ 0x71
+                0x72 => instruction!(Sbc, RegisterPairImplied(SP), RegisterPairImplied(HL)),
+                0x73 => instruction!(Ld, RegisterPairImplied(SP), MemoryDirect(next_doublet(bytes)?)),
+                // 0x74
+                0x75 => instruction!(Retn),
+                0x76 => instruction!(Im(1)),
+                // 0x77
+                0x78 => instruction!(In, PortIndirect(C), RegisterImplied(A)),
+                0x79 => instruction!(Out, RegisterImplied(A), PortIndirect(C)),
+                0x7A => instruction!(Adc, RegisterPairImplied(SP), RegisterPairImplied(HL)),
+                0x7B => instruction!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(SP)),
+                // 0x7C
+                0x7D => instruction!(Retn),
+                0x7E => instruction!(Im(2)),
+                // 0x7F ~ 0x9F
+                0xA0 => instruction!(Ldi),
+                0xA1 => instruction!(Cpi),
+                0xA2 => instruction!(Ini),
+                0xA3 => instruction!(Outi),
+                // 0xA4 ~ 0xA7
+                0xA8 => instruction!(Ldd),
+                0xA9 => instruction!(Cpd),
+                0xAA => instruction!(Ind),
+                0xAB => instruction!(Outd),
+                // 0xAC ~ 0xAF
+                0xB0 => instruction!(Ldir),
+                0xB1 => instruction!(Cpir),
+                0xB2 => instruction!(Inir),
+                0xB3 => instruction!(Otir),
+                // 0xB4 ~ 0xB7
+                0xB8 => instruction!(Lddr),
+                0xB9 => instruction!(Cpdr),
+                0xBA => instruction!(Indr),
+                0xBB => instruction!(Otdr),
+                // 0xBC ~ 0xFF
                 _ => return None,
             },
             0xEE => instruction!(Xor, source: OctetImmediate(next_byte(bytes)?)),
