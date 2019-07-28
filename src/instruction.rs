@@ -193,6 +193,7 @@ impl Instruction {
 
     /// Decodes a single instruction (opcode and operands).
     #[allow(clippy::cognitive_complexity)]
+    #[rustfmt::skip]
     fn decode<R: Read>(bytes: &mut Bytes<R>) -> Option<Self> {
         /// Flattens the next byte in the stream to an `Option<u8>` value.
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
@@ -213,8 +214,7 @@ impl Instruction {
         use RegisterPairType::*;
         use RegisterType::*;
 
-        #[rustfmt::skip]
-        let instruction = match next_byte(bytes)? {
+        match next_byte(bytes)? {
             0x00 => instruction!(Nop),
             0x01 => instruction!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(BC)),
             0x02 => instruction!(Ld, RegisterImplied(A), MemoryIndirect(BC)),
@@ -418,7 +418,7 @@ impl Instruction {
             0xC8 => instruction!(Ret(Some(FlagSet(Flag::Z)))),
             0xC9 => instruction!(Ret(None)),
             0xCA => instruction!(Jp(Some(FlagSet(Flag::Z))), source: DoubletImmediate(next_doublet(bytes)?)),
-            0xCB => unimplemented!("Bit instruction table not yet supported"),
+            0xCB => Instruction::decode_cb(next_byte(bytes)?)?,
             0xCC => instruction!(Call(Some(FlagSet(Flag::Z))), source: DoubletImmediate(next_doublet(bytes)?)),
             0xCD => instruction!(Call(None), source: DoubletImmediate(next_doublet(bytes)?)),
             0xCE => instruction!(Adc, OctetImmediate(next_byte(bytes)?), RegisterImplied(A)),
@@ -555,9 +555,54 @@ impl Instruction {
             0xFD => unimplemented!("IY instruction table not yet supported"),
             0xFE => instruction!(Cp, source: OctetImmediate(next_byte(bytes)?)),
             0xFF => instruction!(Rst(0x38)),
+        }.into()
+    }
+
+    /// Decodes the second part of a "bit" instruction, whose opcode is known to begin with `0xCB`.
+    fn decode_cb(opcode: u8) -> Option<Instruction> {
+        use InstructionType::*;
+        use Operand::*;
+        use RegisterPairType::*;
+        use RegisterType::*;
+
+        let instruction = match opcode & 0xF8 {
+            0x00 => Rlc,
+            0x08 => Rrc,
+            0x10 => Rl,
+            0x18 => Rr,
+            0x20 => Sla,
+            0x28 => Sra,
+            0x30 => return None,
+            0x38 => Srl,
+            0x40 | 0x48 | 0x50 | 0x58 | 0x60 | 0x68 | 0x70 | 0x78 => Bit,
+            0x80 | 0x88 | 0x90 | 0x98 | 0xA0 | 0xA8 | 0xB0 | 0xB8 => Res,
+            0xC0 | 0xC8 | 0xD0 | 0xD8 | 0xE0 | 0xE8 | 0xF0 | 0xF8 => Set,
+            _ => unreachable!("0x{:02X}", opcode),
         };
 
-        Some(instruction)
+        let operand_bit = opcode >> 3 & 0x07;
+
+        let operand = match opcode & 0xC7 {
+            0x00 => RegisterImplied(B),
+            0x01 => RegisterImplied(C),
+            0x02 => RegisterImplied(D),
+            0x03 => RegisterImplied(E),
+            0x04 => RegisterImplied(H),
+            0x05 => RegisterImplied(L),
+            0x06 => MemoryIndirect(HL),
+            0x07 => RegisterImplied(A),
+            0x40 | 0x80 | 0xC0 => RegisterBitImplied(B, operand_bit),
+            0x41 | 0x81 | 0xC1 => RegisterBitImplied(C, operand_bit),
+            0x42 | 0x82 | 0xC2 => RegisterBitImplied(D, operand_bit),
+            0x43 | 0x83 | 0xC3 => RegisterBitImplied(E, operand_bit),
+            0x44 | 0x84 | 0xC4 => RegisterBitImplied(H, operand_bit),
+            0x45 | 0x85 | 0xC5 => RegisterBitImplied(L, operand_bit),
+            0x46 | 0x86 | 0xC6 => MemoryBitIndirect(HL, operand_bit),
+            0x47 | 0x87 | 0xC7 => RegisterBitImplied(A, operand_bit),
+            _ => unreachable!("0x{:02X}", opcode),
+        };
+
+        Some(instruction!(instruction, destination: operand))
     }
 
     /// Decodes a sequence of instructions, until the end of the stream or an error is reached.
@@ -621,6 +666,45 @@ mod tests {
     fn decode_instruction_default() {
         let nop = Instruction::decode(&mut [0x00].bytes()).unwrap();
         assert_eq!(Instruction::default(), nop);
+    }
+
+    #[test]
+    fn decode_instruction_cb() {
+        for opcode in 0x00..=0xFF {
+            let cb_instruction = Instruction::decode(&mut [0xCB, opcode].bytes());
+
+            if opcode >= 0x30 && opcode <= 0x37 {
+                assert!(cb_instruction.is_none())
+            } else {
+                assert!(cb_instruction.is_some())
+            };
+        }
+    }
+
+    #[test]
+    fn decode_instruction_bit() {
+        for opcode in 0x40..=0xFF {
+            let bit_instruction = Instruction::decode(&mut [0xCB, opcode].bytes()).unwrap();
+            let offset = 0x40 * (opcode / 0x40);
+
+            let expected_instruction = match offset {
+                0x40 => InstructionType::Bit,
+                0x80 => InstructionType::Res,
+                0xC0 => InstructionType::Set,
+                _ => unreachable!(),
+            };
+            let actual_instruction = bit_instruction.r#type;
+
+            let expected_bit = (opcode - offset) / 8;
+            let actual_bit = match bit_instruction.destination.unwrap() {
+                Operand::RegisterBitImplied(_, val) => val,
+                Operand::MemoryBitIndirect(_, val) => val,
+                _ => panic!("Unexpected decoded operand"),
+            };
+
+            assert_eq!(expected_instruction, actual_instruction);
+            assert_eq!(expected_bit, actual_bit);
+        }
     }
 
     #[test]
