@@ -215,7 +215,62 @@ impl Instruction {
         use RegisterPairType::*;
         use RegisterType::*;
 
-        /// Decodes partial index instructions, whose opcodes begin with `0xDD` or `0xFD`.
+        /// Decodes a partial "bit" instruction, whose opcode is known to begin with `0xCB`, `0xDDCB`, or `0xFDCB`.
+        /// The prefix, ending with `0xCB`, is assumed to have been read already, so only the remainder is read from `bytes`.
+        fn decode_bit_instruction<R: Read>(
+            bytes: &mut Bytes<R>,
+            index_register: Option<RegisterPairType>,
+        ) -> Option<Instruction> {
+            let opcode = next_byte(bytes)?;
+
+            let instruction = match opcode & 0xF8 {
+                0x00 => Rlc,
+                0x08 => Rrc,
+                0x10 => Rl,
+                0x18 => Rr,
+                0x20 => Sla,
+                0x28 => Sra,
+                0x30 => return None,
+                0x38 => Srl,
+                0x40 | 0x48 | 0x50 | 0x58 | 0x60 | 0x68 | 0x70 | 0x78 => Bit,
+                0x80 | 0x88 | 0x90 | 0x98 | 0xA0 | 0xA8 | 0xB0 | 0xB8 => Res,
+                0xC0 | 0xC8 | 0xD0 | 0xD8 | 0xE0 | 0xE8 | 0xF0 | 0xF8 => Set,
+                _ => unreachable!("0x{:02X}", opcode),
+            };
+
+            let operand_register = opcode & 0x07;
+            let operand_bit = if opcode >= 0x40 { Some(opcode >> 3 & 0x07) } else { None };
+            let operand = match index_register {
+                None => match (operand_register, operand_bit) {
+                    (0x00, None) => RegisterImplied(B),
+                    (0x01, None) => RegisterImplied(C),
+                    (0x02, None) => RegisterImplied(D),
+                    (0x03, None) => RegisterImplied(E),
+                    (0x04, None) => RegisterImplied(H),
+                    (0x05, None) => RegisterImplied(L),
+                    (0x06, None) => MemoryIndirect(HL),
+                    (0x07, None) => RegisterImplied(A),
+                    (0x00, Some(bit)) => RegisterBitImplied(B, bit),
+                    (0x01, Some(bit)) => RegisterBitImplied(C, bit),
+                    (0x02, Some(bit)) => RegisterBitImplied(D, bit),
+                    (0x03, Some(bit)) => RegisterBitImplied(E, bit),
+                    (0x04, Some(bit)) => RegisterBitImplied(H, bit),
+                    (0x05, Some(bit)) => RegisterBitImplied(L, bit),
+                    (0x06, Some(bit)) => MemoryBitIndirect(HL, bit),
+                    (0x07, Some(bit)) => RegisterBitImplied(A, bit),
+                    _ => unreachable!("0x{:02X}", opcode),
+                },
+                Some(idx) => match (operand_register, operand_bit) {
+                    (0x06, None) => MemoryIndexed(idx, next_byte(bytes)? as i8),
+                    (0x06, Some(bit)) => MemoryBitIndexed(idx, next_byte(bytes)? as i8, bit),
+                    _ => return None,
+                },
+            };
+
+            Some(instruction!(instruction, destination: operand))
+        }
+
+        /// Decodes a partial index instruction, whose opcode is known to begin with `0xDD` or `0xFD`.
         fn decode_index_instruction<R: Read>(
             bytes: &mut Bytes<R>,
             index_register: RegisterPairType,
@@ -282,7 +337,7 @@ impl Instruction {
                 // 0xB7 ~ 0xBD
                 0xBE => instruction!(Cp, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
                 // 0xBF ~ 0xCA
-                0xCB => unimplemented!("Index bit instructions not yet supported"),
+                0xCB => decode_bit_instruction(bytes, Some(idx))?,
                 // 0xCC ~ 0xE0
                 0xE1 => instruction!(Pop, destination: RegisterPairImplied(IX)),
                 // 0xE2
@@ -503,7 +558,7 @@ impl Instruction {
             0xC8 => instruction!(Ret(Some(FlagSet(Flag::Z)))),
             0xC9 => instruction!(Ret(None)),
             0xCA => instruction!(Jp(Some(FlagSet(Flag::Z))), source: DoubletImmediate(next_doublet(bytes)?)),
-            0xCB => Instruction::decode_cb(next_byte(bytes)?)?,
+            0xCB => decode_bit_instruction(bytes, None)?,
             0xCC => instruction!(Call(Some(FlagSet(Flag::Z))), source: DoubletImmediate(next_doublet(bytes)?)),
             0xCD => instruction!(Call(None), source: DoubletImmediate(next_doublet(bytes)?)),
             0xCE => instruction!(Adc, OctetImmediate(next_byte(bytes)?), RegisterImplied(A)),
@@ -641,53 +696,6 @@ impl Instruction {
             0xFE => instruction!(Cp, source: OctetImmediate(next_byte(bytes)?)),
             0xFF => instruction!(Rst(0x38)),
         }.into()
-    }
-
-    /// Decodes the second part of a "bit" instruction, whose opcode is known to begin with `0xCB`.
-    fn decode_cb(opcode: u8) -> Option<Instruction> {
-        use InstructionType::*;
-        use Operand::*;
-        use RegisterPairType::*;
-        use RegisterType::*;
-
-        let instruction = match opcode & 0xF8 {
-            0x00 => Rlc,
-            0x08 => Rrc,
-            0x10 => Rl,
-            0x18 => Rr,
-            0x20 => Sla,
-            0x28 => Sra,
-            0x30 => return None,
-            0x38 => Srl,
-            0x40 | 0x48 | 0x50 | 0x58 | 0x60 | 0x68 | 0x70 | 0x78 => Bit,
-            0x80 | 0x88 | 0x90 | 0x98 | 0xA0 | 0xA8 | 0xB0 | 0xB8 => Res,
-            0xC0 | 0xC8 | 0xD0 | 0xD8 | 0xE0 | 0xE8 | 0xF0 | 0xF8 => Set,
-            _ => unreachable!("0x{:02X}", opcode),
-        };
-
-        let operand_bit = opcode >> 3 & 0x07;
-
-        let operand = match opcode & 0xC7 {
-            0x00 => RegisterImplied(B),
-            0x01 => RegisterImplied(C),
-            0x02 => RegisterImplied(D),
-            0x03 => RegisterImplied(E),
-            0x04 => RegisterImplied(H),
-            0x05 => RegisterImplied(L),
-            0x06 => MemoryIndirect(HL),
-            0x07 => RegisterImplied(A),
-            0x40 | 0x80 | 0xC0 => RegisterBitImplied(B, operand_bit),
-            0x41 | 0x81 | 0xC1 => RegisterBitImplied(C, operand_bit),
-            0x42 | 0x82 | 0xC2 => RegisterBitImplied(D, operand_bit),
-            0x43 | 0x83 | 0xC3 => RegisterBitImplied(E, operand_bit),
-            0x44 | 0x84 | 0xC4 => RegisterBitImplied(H, operand_bit),
-            0x45 | 0x85 | 0xC5 => RegisterBitImplied(L, operand_bit),
-            0x46 | 0x86 | 0xC6 => MemoryBitIndirect(HL, operand_bit),
-            0x47 | 0x87 | 0xC7 => RegisterBitImplied(A, operand_bit),
-            _ => unreachable!("0x{:02X}", opcode),
-        };
-
-        Some(instruction!(instruction, destination: operand))
     }
 
     /// Decodes a sequence of instructions, until the end of the stream or an error is reached.
