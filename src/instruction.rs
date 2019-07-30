@@ -14,6 +14,9 @@ macro_rules! instruction {
     ($type: expr, destination: $destination: expr) => {
         Instruction::new($type, None, Some($destination))
     };
+    ($type: expr, destination: $destination: expr, source: $source: expr) => {
+        Instruction::new($type, Some($source), Some($destination))
+    };
     ($type: expr, $source: expr, $destination: expr) => {
         Instruction::new($type, Some($source), Some($destination))
     };
@@ -207,13 +210,96 @@ impl Instruction {
             Some(u16::from_le_bytes([next_byte(bytes)?, next_byte(bytes)?]))
         }
 
-        // Parse the instruction opcode and operands byte by byte.
         use Condition::*;
         use InstructionType::*;
         use Operand::*;
         use RegisterPairType::*;
         use RegisterType::*;
 
+        /// Decodes partial index instructions, whose opcodes begin with `0xDD` or `0xFD`.
+        fn decode_index_instruction<R: Read>(
+            bytes: &mut Bytes<R>,
+            index_register: RegisterPairType,
+        ) -> Option<Instruction> {
+            let idx = index_register;
+            assert!(idx == IX || idx == IY);
+
+            match next_byte(bytes)? {
+                // 0x00 ~ 0x08
+                0x09 => instruction!(Add, RegisterPairImplied(BC), RegisterPairImplied(idx)),
+                // 0x0A ~ 0x18
+                0x19 => instruction!(Add, RegisterPairImplied(DE), RegisterPairImplied(idx)),
+                // 0x1A ~ 0x20
+                0x21 => instruction!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(idx)),
+                0x22 => instruction!(Ld, RegisterPairImplied(idx), MemoryDirect(next_doublet(bytes)?)),
+                0x23 => instruction!(Inc, destination: RegisterPairImplied(idx)),
+                // 0x24 ~ 0x28
+                0x29 => instruction!(Add, RegisterPairImplied(idx), RegisterPairImplied(idx)),
+                0x2A => instruction!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(idx)),
+                0x2B => instruction!(Dec, destination: RegisterPairImplied(idx)),
+                // 0x2C ~ 0x33
+                0x34 => instruction!(Inc, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x35 => instruction!(Dec, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x36 => instruction!(Ld, destination: MemoryIndexed(idx, next_byte(bytes)? as i8), source: OctetImmediate(next_byte(bytes)?)),
+                // 0x37 ~ 0x38
+                0x39 => instruction!(Add, RegisterPairImplied(SP), RegisterPairImplied(idx)),
+                // 0x3A ~ 0x45
+                0x46 => instruction!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(B)),
+                // 0x47 ~ 0x4D
+                0x4E => instruction!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(C)),
+                // 0x4F ~ 0x55
+                0x56 => instruction!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(D)),
+                // 0x57 ~ 0x5D
+                0x5E => instruction!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(E)),
+                // 0x5F ~ 0x65
+                0x66 => instruction!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(H)),
+                // 0x67 ~ 0x6D
+                0x6E => instruction!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(L)),
+                // 0x6F
+                0x70 => instruction!(Ld, RegisterImplied(B), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x71 => instruction!(Ld, RegisterImplied(C), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x72 => instruction!(Ld, RegisterImplied(D), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x73 => instruction!(Ld, RegisterImplied(E), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x74 => instruction!(Ld, RegisterImplied(H), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x75 => instruction!(Ld, RegisterImplied(L), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0x76
+                0x77 => instruction!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0x78 ~ 0x7D
+                0x7E => instruction!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                // 0x7F ~ 0x85
+                0x86 => instruction!(Add, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                // 0x87 ~ 0x8D
+                0x8E => instruction!(Adc, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                // 0x8F ~ 0x95
+                0x96 => instruction!(Sub, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0x97 ~ 0x9D
+                0x9E => instruction!(Sub, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                // 0x9F ~ 0xA5
+                0xA6 => instruction!(And, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0xA7 ~ 0xAD
+                0xAE => instruction!(Xor, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0xAF ~ 0xB5
+                0xB6 => instruction!(Or, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0xB7 ~ 0xBD
+                0xBE => instruction!(Cp, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0xBF ~ 0xCA
+                0xCB => unimplemented!("Index bit instructions not yet supported"),
+                // 0xCC ~ 0xE0
+                0xE1 => instruction!(Pop, destination: RegisterPairImplied(IX)),
+                // 0xE2
+                0xE3 => instruction!(Ex, RegisterPairImplied(IX), MemoryIndirect(SP)),
+                // 0xE4
+                0xE5 => instruction!(Push, source: RegisterPairImplied(IX)),
+                // 0xE6 ~ 0xE8
+                0xE9 => instruction!(Jp(None), source: MemoryIndirect(IX)),
+                // 0xEA ~ 0xF8
+                0xF9 => instruction!(Ld, RegisterPairImplied(IX), RegisterPairImplied(SP)),
+                // 0xFA ~ 0xFF
+                _ => return None,
+            }.into()
+        }
+
+        // Parse the instruction opcode and operands byte by byte.
         match next_byte(bytes)? {
             0x00 => instruction!(Nop),
             0x01 => instruction!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(BC)),
@@ -436,7 +522,7 @@ impl Instruction {
             0xDA => instruction!(Jp(Some(FlagSet(Flag::C))), source: DoubletImmediate(next_doublet(bytes)?)),
             0xDB => instruction!(Out, PortDirect(next_byte(bytes)?), RegisterImplied(A)),
             0xDC => instruction!(Call(Some(FlagSet(Flag::C))), source: DoubletImmediate(next_doublet(bytes)?)),
-            0xDD => unimplemented!("IX instruction table not yet supported"),
+            0xDD => decode_index_instruction(bytes, IX)?,
             0xDE => instruction!(Sbc, OctetImmediate(next_byte(bytes)?), RegisterImplied(A)),
             0xDF => instruction!(Rst(0x18)),
             0xE0 => instruction!(Ret(Some(FlagSet(Flag::PV)))),
@@ -552,7 +638,7 @@ impl Instruction {
             0xFA => instruction!(Jp(Some(FlagNotSet(Flag::S))), source: DoubletImmediate(next_doublet(bytes)?)),
             0xFB => instruction!(Ei),
             0xFC => instruction!(Call(Some(FlagNotSet(Flag::S))), source: DoubletImmediate(next_doublet(bytes)?)),
-            0xFD => unimplemented!("IY instruction table not yet supported"),
+            0xFD => decode_index_instruction(bytes, IY)?,
             0xFE => instruction!(Cp, source: OctetImmediate(next_byte(bytes)?)),
             0xFF => instruction!(Rst(0x38)),
         }.into()
