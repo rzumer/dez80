@@ -6,19 +6,19 @@ use std::io::{Bytes, Read};
 
 macro_rules! instruction {
     ($type: expr) => {
-        Instruction::new($type, None, None)
+        Instruction { r#type: $type, source: None, destination: None }
     };
     ($type: expr, source: $source: expr) => {
-        Instruction::new($type, Some($source), None)
+        Instruction { r#type: $type, source: Some($source), destination: None }
     };
     ($type: expr, destination: $destination: expr) => {
-        Instruction::new($type, None, Some($destination))
+        Instruction { r#type: $type, source: None, destination: Some($destination) }
     };
     ($type: expr, destination: $destination: expr, source: $source: expr) => {
-        Instruction::new($type, Some($source), Some($destination))
+        Instruction { r#type: $type, source: Some($source), destination: Some($destination) }
     };
     ($type: expr, $source: expr, $destination: expr) => {
-        Instruction::new($type, Some($source), Some($destination))
+        Instruction { r#type: $type, source: Some($source), destination: Some($destination) }
     };
 }
 
@@ -125,16 +125,12 @@ impl fmt::Display for InstructionType {
 /// Represents a single Z80 instruction with machine cycle granularity.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Instruction {
-    pub r#type: InstructionType,
-    pub source: Option<Operand>,
-    pub destination: Option<Operand>,
+    r#type: InstructionType,
+    source: Option<Operand>,
+    destination: Option<Operand>,
 }
 
 impl Instruction {
-    fn new(r#type: InstructionType, source: Option<Operand>, destination: Option<Operand>) -> Self {
-        Instruction { r#type, source, destination }
-    }
-
     /// Breaks down an instruction into a sequence of operations
     /// providing data relevant to their execution.
     pub fn operations(&self) -> Vec<Operation> {
