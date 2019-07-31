@@ -221,6 +221,9 @@ impl Instruction {
             bytes: &mut Bytes<R>,
             index_register: Option<RegisterPairType>,
         ) -> Option<Instruction> {
+            // For index bit instructions, the offset is provided before the instruction information.
+            let offset =
+                if index_register.is_some() { next_byte(bytes)? as i8 } else { Default::default() };
             let opcode = next_byte(bytes)?;
 
             let instruction = match opcode & 0xF8 {
@@ -238,33 +241,41 @@ impl Instruction {
                 _ => unreachable!("0x{:02X}", opcode),
             };
 
-            let operand_register = opcode & 0x07;
-            let operand_bit = if opcode >= 0x40 { Some(opcode >> 3 & 0x07) } else { None };
-            let operand = match index_register {
-                None => match (operand_register, operand_bit) {
-                    (0x00, None) => RegisterImplied(B),
-                    (0x01, None) => RegisterImplied(C),
-                    (0x02, None) => RegisterImplied(D),
-                    (0x03, None) => RegisterImplied(E),
-                    (0x04, None) => RegisterImplied(H),
-                    (0x05, None) => RegisterImplied(L),
-                    (0x06, None) => MemoryIndirect(HL),
-                    (0x07, None) => RegisterImplied(A),
-                    (0x00, Some(bit)) => RegisterBitImplied(B, bit),
-                    (0x01, Some(bit)) => RegisterBitImplied(C, bit),
-                    (0x02, Some(bit)) => RegisterBitImplied(D, bit),
-                    (0x03, Some(bit)) => RegisterBitImplied(E, bit),
-                    (0x04, Some(bit)) => RegisterBitImplied(H, bit),
-                    (0x05, Some(bit)) => RegisterBitImplied(L, bit),
-                    (0x06, Some(bit)) => MemoryBitIndirect(HL, bit),
-                    (0x07, Some(bit)) => RegisterBitImplied(A, bit),
-                    _ => unreachable!("0x{:02X}", opcode),
-                },
-                Some(idx) => match (operand_register, operand_bit) {
-                    (0x06, None) => MemoryIndexed(idx, next_byte(bytes)? as i8),
-                    (0x06, Some(bit)) => MemoryBitIndexed(idx, next_byte(bytes)? as i8, bit),
-                    _ => return None,
-                },
+            let operand_register = match opcode & 0x07 {
+                0x00 => Some(B),
+                0x01 => Some(C),
+                0x02 => Some(D),
+                0x03 => Some(E),
+                0x04 => Some(H),
+                0x05 => Some(L),
+                0x06 => None, // HL in non-indexed instructions
+                0x07 => Some(A),
+                _ => unreachable!(),
+            };
+
+            let operand = if opcode < 0x40 {
+                match index_register {
+                    None => match operand_register {
+                        Some(reg) => RegisterImplied(reg),
+                        None => MemoryIndirect(HL),
+                    },
+                    Some(idx) => match operand_register {
+                        None => MemoryIndexed(idx, offset),
+                        _ => return None,
+                    },
+                }
+            } else {
+                let bit = opcode >> 3 & 0x07;
+                match index_register {
+                    None => match operand_register {
+                        Some(reg) => RegisterBitImplied(reg, bit),
+                        None => MemoryBitIndirect(HL, bit),
+                    },
+                    Some(idx) => match operand_register {
+                        None => MemoryBitIndexed(idx, offset, bit),
+                        _ => return None,
+                    },
+                }
             };
 
             Some(instruction!(instruction, destination: operand))
