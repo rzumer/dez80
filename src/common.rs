@@ -33,6 +33,14 @@ pub enum Operand {
 impl fmt::Display for Operand {
     /// Formats operands based on standard notation.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let additive_operator_str = |value: i8| -> &'static str {
+            if value < 0 {
+                "-"
+            } else {
+                "+"
+            }
+        };
+
         use Operand::*;
 
         match self {
@@ -44,10 +52,14 @@ impl fmt::Display for Operand {
             MemoryDirect(val) => write!(f, "(0x{:04x})", val.to_le()),
             MemoryRelative(val) => write!(f, "0x{:02x}", val),
             MemoryIndirect(reg) => write!(f, "({})", reg),
-            MemoryIndexed(reg, idx) => write!(f, "({} + 0x{:02x})", reg, idx),
+            MemoryIndexed(reg, idx) => {
+                write!(f, "({} {} 0x{:02x})", reg, additive_operator_str(*idx), idx.abs())
+            }
             MemoryZeroPage(val) => write!(f, "0x{:02x}", val),
             MemoryBitIndirect(reg, bit) => write!(f, "{}, ({})", bit, reg),
-            MemoryBitIndexed(reg, idx, bit) => write!(f, "{}, ({} + 0x{:02x})", bit, reg, idx),
+            MemoryBitIndexed(reg, idx, bit) => {
+                write!(f, "{}, ({} {} 0x{:02x})", bit, reg, additive_operator_str(*idx), idx.abs())
+            }
             PortDirect(val) => write!(f, "(0x{:02x})", val),
             PortIndirect(reg) => write!(f, "({})", reg),
         }
