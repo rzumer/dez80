@@ -14,7 +14,7 @@ macro_rules! impl_display_register {
 /// Used to identify a single register in a manner
 /// independent of its representation in a `RegisterSet`.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum RegisterType {
+pub enum SingleRegisterType {
     A,
     F,
     B,
@@ -58,7 +58,13 @@ pub enum RegisterPairType {
     HL_,
 }
 
-impl_display_register!(RegisterType, RegisterPairType);
+impl_display_register!(SingleRegisterType, RegisterPairType);
+
+/// Used to identify either a single register or a register pair.
+pub enum RegisterType {
+    SingleRegister(SingleRegisterType),
+    RegisterPair(RegisterPairType),
+}
 
 /// Represents a single-byte register.
 pub type Register = u8;

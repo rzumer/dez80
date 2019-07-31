@@ -6,7 +6,7 @@ use std::fmt;
 pub enum Condition {
     FlagSet(Flag),
     FlagNotSet(Flag),
-    RegisterZero(RegisterType),
+    RegisterZero(SingleRegisterType),
     RegisterPairZero(RegisterPairType),
 }
 
@@ -16,9 +16,9 @@ pub enum Condition {
 pub enum Operand {
     OctetImmediate(u8),
     DoubletImmediate(u16),
-    RegisterImplied(RegisterType),
+    RegisterImplied(SingleRegisterType),
     RegisterPairImplied(RegisterPairType),
-    RegisterBitImplied(RegisterType, u8),
+    RegisterBitImplied(SingleRegisterType, u8),
     MemoryDirect(u16),
     MemoryRelative(i8),
     MemoryIndirect(RegisterPairType),
@@ -27,7 +27,7 @@ pub enum Operand {
     MemoryBitIndirect(RegisterPairType, u8),
     MemoryBitIndexed(RegisterPairType, i8, u8),
     PortDirect(u8),
-    PortIndirect(RegisterType),
+    PortIndirect(SingleRegisterType),
 }
 
 impl fmt::Display for Operand {

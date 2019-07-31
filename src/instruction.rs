@@ -213,7 +213,7 @@ impl Instruction {
         use InstructionType::*;
         use Operand::*;
         use RegisterPairType::*;
-        use RegisterType::*;
+        use SingleRegisterType::*;
 
         /// Decodes a partial "bit" instruction, whose opcode is known to begin with `0xCB`, `0xDDCB`, or `0xFDCB`.
         /// The prefix, ending with `0xCB`, is assumed to have been read already, so only the remainder is read from `bytes`.
@@ -756,7 +756,7 @@ mod tests {
     fn decode_instruction() {
         let inc_b = Instruction::decode(&mut [0x04].bytes()).unwrap();
         assert_eq!(None, inc_b.source);
-        assert_eq!(Some(Operand::RegisterImplied(RegisterType::B)), inc_b.destination);
+        assert_eq!(Some(Operand::RegisterImplied(SingleRegisterType::B)), inc_b.destination);
         assert_eq!(InstructionType::Inc, inc_b.r#type);
     }
 
