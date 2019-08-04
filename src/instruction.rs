@@ -386,10 +386,10 @@ impl Instruction {
                 match index_register {
                     None => match operand_register {
                         Some(reg) => RegisterBitImplied(reg, bit),
-                        None => MemoryBitIndirect(HL, bit),
+                        None => MemoryIndirectBit(HL, bit),
                     },
                     Some(idx) => match operand_register {
-                        None => MemoryBitIndexed(idx, offset, bit),
+                        None => MemoryIndexedBit(idx, offset, bit),
                         _ => return None,
                     },
                 }
@@ -843,7 +843,7 @@ mod tests {
             let expected_bit = (opcode - offset) / 8;
             let actual_bit = match bit_instruction.destination.unwrap() {
                 Operand::RegisterBitImplied(_, val) => val,
-                Operand::MemoryBitIndirect(_, val) => val,
+                Operand::MemoryIndirectBit(_, val) => val,
                 _ => panic!("Unexpected decoded operand"),
             };
 

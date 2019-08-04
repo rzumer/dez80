@@ -24,8 +24,8 @@ pub enum Operand {
     MemoryIndirect(RegisterPairType),
     MemoryIndexed(RegisterPairType, i8),
     MemoryZeroPage(u8),
-    MemoryBitIndirect(RegisterPairType, u8),
-    MemoryBitIndexed(RegisterPairType, i8, u8),
+    MemoryIndirectBit(RegisterPairType, u8),
+    MemoryIndexedBit(RegisterPairType, i8, u8),
     PortDirect(u8),
     PortIndirect(SingleRegisterType),
 }
@@ -33,14 +33,6 @@ pub enum Operand {
 impl fmt::Display for Operand {
     /// Formats operands based on standard notation.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let additive_operator_str = |value: i8| -> &'static str {
-            if value < 0 {
-                "-"
-            } else {
-                "+"
-            }
-        };
-
         use Operand::*;
 
         match self {
@@ -50,16 +42,12 @@ impl fmt::Display for Operand {
             RegisterPairImplied(reg) => write!(f, "{}", reg),
             RegisterBitImplied(reg, bit) => write!(f, "{}, {}", bit, reg),
             MemoryDirect(val) => write!(f, "(0x{:04x})", val.to_le()),
-            MemoryRelative(val) => write!(f, "0x{:02x}", val),
+            MemoryRelative(val) => write!(f, "0x{:02x}", *val as u8),
             MemoryIndirect(reg) => write!(f, "({})", reg),
-            MemoryIndexed(reg, idx) => {
-                write!(f, "({} {} 0x{:02x})", reg, additive_operator_str(*idx), idx.abs())
-            }
+            MemoryIndexed(reg, idx) => write!(f, "({} + 0x{:02x})", reg, *idx as u8),
             MemoryZeroPage(val) => write!(f, "0x{:02x}", val),
-            MemoryBitIndirect(reg, bit) => write!(f, "{}, ({})", bit, reg),
-            MemoryBitIndexed(reg, idx, bit) => {
-                write!(f, "{}, ({} {} 0x{:02x})", bit, reg, additive_operator_str(*idx), idx.abs())
-            }
+            MemoryIndirectBit(reg, bit) => write!(f, "{}, ({})", bit, reg),
+            MemoryIndexedBit(reg, idx, bit) => write!(f, "{}, ({} + 0x{:02x})", bit, reg, *idx as u8),
             PortDirect(val) => write!(f, "(0x{:02x})", val),
             PortIndirect(reg) => write!(f, "({})", reg),
         }
