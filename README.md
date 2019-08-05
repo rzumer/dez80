@@ -6,7 +6,6 @@ A Z80 disassembly library.
 
 * Standard Z80 instruction decoding
 * Implementation-independent data structures to facilitate handling of decoded instructions
-* Decomposition of instructions into operations with fixed clock cycle costs
 * Format handlers for displaying instructions and their individual components
 
 ## Use Cases
