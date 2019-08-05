@@ -272,15 +272,15 @@ impl Instruction {
                 0x49 => extended!(Out, RegisterImplied(C), PortIndirect(C)),
                 0x4A => extended!(Adc, RegisterPairImplied(BC), RegisterPairImplied(HL)),
                 0x4B => extended!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(BC)),
-                // 0x4C
+                0x4C => extended!(Neg),
                 0x4D => extended!(Reti),
-                // 0x4E
+                0x4E => extended!(Im(0)), // sometimes reported as undefined between Im(0) and Im(1)
                 0x4F => extended!(Ld, RegisterImplied(A), RegisterImplied(R)),
                 0x50 => extended!(In, PortIndirect(C), RegisterImplied(D)),
                 0x51 => extended!(Out, RegisterImplied(D), PortIndirect(C)),
                 0x52 => extended!(Sbc, RegisterPairImplied(DE), RegisterPairImplied(HL)),
                 0x53 => extended!(Ld, RegisterPairImplied(DE), MemoryDirect(next_doublet(bytes)?)),
-                // 0x54
+                0x54 => extended!(Neg),
                 0x55 => extended!(Retn),
                 0x56 => extended!(Im(1)),
                 0x57 => extended!(Ld, RegisterImplied(I), RegisterImplied(A)),
@@ -288,28 +288,31 @@ impl Instruction {
                 0x59 => extended!(Out, RegisterImplied(E), PortIndirect(C)),
                 0x5A => extended!(Adc, RegisterPairImplied(DE), RegisterPairImplied(HL)),
                 0x5B => extended!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(DE)),
-                // 0x5C
+                0x5C => extended!(Neg),
                 0x5D => extended!(Retn),
                 0x5E => extended!(Im(2)),
                 0x5F => extended!(Ld, RegisterImplied(R), RegisterImplied(A)),
                 0x60 => extended!(In, PortIndirect(C), RegisterImplied(H)),
                 0x61 => extended!(Out, RegisterImplied(H), PortIndirect(C)),
                 0x62 => extended!(Sbc, RegisterPairImplied(HL), RegisterPairImplied(HL)),
-                // 0x63 ~ 0x64
+                0x63 => extended!(Ld, RegisterPairImplied(HL), MemoryDirect(next_doublet(bytes)?)),
+                0x64 => extended!(Neg),
                 0x65 => extended!(Retn),
                 0x66 => extended!(Im(0)),
                 0x67 => extended!(Rrd),
                 0x68 => extended!(In, PortIndirect(C), RegisterImplied(L)),
                 0x69 => extended!(Out, RegisterImplied(L), PortIndirect(C)),
                 0x6A => extended!(Adc, RegisterPairImplied(HL), RegisterPairImplied(HL)),
-                // 0x6B ~ 0x6C
+                0x6B => extended!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(HL)),
+                0x6C => extended!(Neg),
                 0x6D => extended!(Retn),
-                // 0x6E
+                0x6E => extended!(Im(0)), // sometimes reported as undefined between Im(0) and Im(1)
                 0x6F => extended!(Rld),
-                // 0x70 ~ 0x71
+                0x70 => extended!(In, source: PortIndirect(C)),
+                0x71 => extended!(Out, OctetImmediate(0), PortIndirect(C)),
                 0x72 => extended!(Sbc, RegisterPairImplied(SP), RegisterPairImplied(HL)),
                 0x73 => extended!(Ld, RegisterPairImplied(SP), MemoryDirect(next_doublet(bytes)?)),
-                // 0x74
+                0x74 => extended!(Neg),
                 0x75 => extended!(Retn),
                 0x76 => extended!(Im(1)),
                 // 0x77
@@ -317,7 +320,7 @@ impl Instruction {
                 0x79 => extended!(Out, RegisterImplied(A), PortIndirect(C)),
                 0x7A => extended!(Adc, RegisterPairImplied(SP), RegisterPairImplied(HL)),
                 0x7B => extended!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(SP)),
-                // 0x7C
+                0x7C => extended!(Neg),
                 0x7D => extended!(Retn),
                 0x7E => extended!(Im(2)),
                 // 0x7F ~ 0x9F
@@ -341,7 +344,7 @@ impl Instruction {
                 0xBA => extended!(Indr),
                 0xBB => extended!(Otdr),
                 // 0xBC ~ 0xFF
-                _ => return None,
+                _ => extended!(Inva),
             }.into()
         }
 
@@ -363,7 +366,7 @@ impl Instruction {
                 0x18 => Rr,
                 0x20 => Sla,
                 0x28 => Sra,
-                0x30 => return None,
+                0x30 => Sll,
                 0x38 => Srl,
                 0x40 | 0x48 | 0x50 | 0x58 | 0x60 | 0x68 | 0x70 | 0x78 => Bit,
                 0x80 | 0x88 | 0x90 | 0x98 | 0xA0 | 0xA8 | 0xB0 | 0xB8 => Res,
@@ -829,12 +832,7 @@ mod tests {
     fn decode_instruction_cb() {
         for opcode in 0x00..=0xFF {
             let cb_instruction = Instruction::decode(&mut [0xCB, opcode].bytes());
-
-            if opcode >= 0x30 && opcode <= 0x37 {
-                assert!(cb_instruction.is_none())
-            } else {
-                assert!(cb_instruction.is_some())
-            };
+            assert!(cb_instruction.is_some());
         }
     }
 
