@@ -92,6 +92,8 @@ pub enum InstructionType {
     Srl,
     Sub,
     Xor,
+    Noni, // Unofficial mnemonic, equivalent to NOP but blocks interrupts until the next decode cycle
+    Inva, // Invalid instruction with no observable side effect, equivalent to NONI followed by NOP
 }
 
 impl fmt::Display for InstructionType {
@@ -234,6 +236,16 @@ impl Instruction {
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
         fn next_doublet<R: Read>(bytes: &mut Bytes<R>) -> Option<u16> {
             Some(u16::from_le_bytes([next_byte(bytes)?, next_byte(bytes)?]))
+        }
+
+        /// Flattens the next byte in the stream to an `Option<u8>` value.
+        /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
+        fn peek_byte<R: Read>(bytes: &mut Bytes<R>) -> Option<u8> {
+            if let Some(&Ok(val)) = bytes.peekable().peek() {
+                Some(val)
+            } else {
+                None
+            }
         }
 
         use Condition::*;
@@ -410,82 +422,81 @@ impl Instruction {
             let idx = index_register;
             assert!(idx == IX || idx == IY);
 
-            match next_byte(bytes)? {
-                // 0x00 ~ 0x08
-                0x09 => indexed!(Add, RegisterPairImplied(BC), RegisterPairImplied(idx)),
-                // 0x0A ~ 0x18
-                0x19 => indexed!(Add, RegisterPairImplied(DE), RegisterPairImplied(idx)),
-                // 0x1A ~ 0x20
-                0x21 => indexed!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(idx)),
-                0x22 => indexed!(Ld, RegisterPairImplied(idx), MemoryDirect(next_doublet(bytes)?)),
-                0x23 => indexed!(Inc, destination: RegisterPairImplied(idx)),
-                // 0x24 ~ 0x28
-                0x29 => indexed!(Add, RegisterPairImplied(idx), RegisterPairImplied(idx)),
-                0x2A => indexed!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(idx)),
-                0x2B => indexed!(Dec, destination: RegisterPairImplied(idx)),
-                // 0x2C ~ 0x33
-                0x34 => indexed!(Inc, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                0x35 => indexed!(Dec, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                0x36 => indexed!(Ld, destination: MemoryIndexed(idx, next_byte(bytes)? as i8), source: OctetImmediate(next_byte(bytes)?)),
-                // 0x37 ~ 0x38
-                0x39 => indexed!(Add, RegisterPairImplied(SP), RegisterPairImplied(idx)),
-                // 0x3A ~ 0x45
-                0x46 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(B)),
-                // 0x47 ~ 0x4D
-                0x4E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(C)),
-                // 0x4F ~ 0x55
-                0x56 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(D)),
-                // 0x57 ~ 0x5D
-                0x5E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(E)),
-                // 0x5F ~ 0x65
-                0x66 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(H)),
-                // 0x67 ~ 0x6D
-                0x6E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(L)),
-                // 0x6F
-                0x70 => indexed!(Ld, RegisterImplied(B), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                0x71 => indexed!(Ld, RegisterImplied(C), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                0x72 => indexed!(Ld, RegisterImplied(D), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                0x73 => indexed!(Ld, RegisterImplied(E), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                0x74 => indexed!(Ld, RegisterImplied(H), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                0x75 => indexed!(Ld, RegisterImplied(L), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0x76
-                0x77 => indexed!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0x78 ~ 0x7D
-                0x7E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                // 0x7F ~ 0x85
-                0x86 => indexed!(Add, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                // 0x87 ~ 0x8D
-                0x8E => indexed!(Adc, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                // 0x8F ~ 0x95
-                0x96 => indexed!(Sub, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0x97 ~ 0x9D
-                0x9E => indexed!(Sub, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                // 0x9F ~ 0xA5
-                0xA6 => indexed!(And, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0xA7 ~ 0xAD
-                0xAE => indexed!(Xor, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0xAF ~ 0xB5
-                0xB6 => indexed!(Or, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0xB7 ~ 0xBD
-                0xBE => indexed!(Cp, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0xBF ~ 0xCA
-                0xCB => decode_bit_instruction(bytes, Some(idx))?,
-                // 0xCC ~ 0xDC
-                0xDD => decode_index_instruction(bytes, IX)?,
-                // 0xDE ~ 0xE0
-                0xE1 => indexed!(Pop, destination: RegisterPairImplied(idx)),
-                // 0xE2
-                0xE3 => indexed!(Ex, RegisterPairImplied(idx), MemoryIndirect(SP)),
-                // 0xE4
-                0xE5 => indexed!(Push, source: RegisterPairImplied(idx)),
-                // 0xE6 ~ 0xE8
-                0xE9 => indexed!(Jp(None), source: MemoryIndirect(idx)),
-                // 0xEA ~ 0xF8
-                0xF9 => indexed!(Ld, RegisterPairImplied(idx), RegisterPairImplied(SP)),
-                // 0xFA ~ 0xFC
-                0xFD => decode_index_instruction(bytes, IY)?,
-                // 0xFE ~ 0xFF
-                _ => return None,
+            match peek_byte(bytes)? {
+                0xDD | 0xFD => indexed!(Noni), // when encountering a double prefix, keep the second one buffered
+                _ => match next_byte(bytes)? {
+                    // 0x00 ~ 0x08
+                    0x09 => indexed!(Add, RegisterPairImplied(BC), RegisterPairImplied(idx)),
+                    // 0x0A ~ 0x18
+                    0x19 => indexed!(Add, RegisterPairImplied(DE), RegisterPairImplied(idx)),
+                    // 0x1A ~ 0x20
+                    0x21 => indexed!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(idx)),
+                    0x22 => indexed!(Ld, RegisterPairImplied(idx), MemoryDirect(next_doublet(bytes)?)),
+                    0x23 => indexed!(Inc, destination: RegisterPairImplied(idx)),
+                    // 0x24 ~ 0x28
+                    0x29 => indexed!(Add, RegisterPairImplied(idx), RegisterPairImplied(idx)),
+                    0x2A => indexed!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(idx)),
+                    0x2B => indexed!(Dec, destination: RegisterPairImplied(idx)),
+                    // 0x2C ~ 0x33
+                    0x34 => indexed!(Inc, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    0x35 => indexed!(Dec, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    0x36 => indexed!(Ld, destination: MemoryIndexed(idx, next_byte(bytes)? as i8), source: OctetImmediate(next_byte(bytes)?)),
+                    // 0x37 ~ 0x38
+                    0x39 => indexed!(Add, RegisterPairImplied(SP), RegisterPairImplied(idx)),
+                    // 0x3A ~ 0x45
+                    0x46 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(B)),
+                    // 0x47 ~ 0x4D
+                    0x4E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(C)),
+                    // 0x4F ~ 0x55
+                    0x56 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(D)),
+                    // 0x57 ~ 0x5D
+                    0x5E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(E)),
+                    // 0x5F ~ 0x65
+                    0x66 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(H)),
+                    // 0x67 ~ 0x6D
+                    0x6E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(L)),
+                    // 0x6F
+                    0x70 => indexed!(Ld, RegisterImplied(B), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    0x71 => indexed!(Ld, RegisterImplied(C), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    0x72 => indexed!(Ld, RegisterImplied(D), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    0x73 => indexed!(Ld, RegisterImplied(E), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    0x74 => indexed!(Ld, RegisterImplied(H), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    0x75 => indexed!(Ld, RegisterImplied(L), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    // 0x76
+                    0x77 => indexed!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    // 0x78 ~ 0x7D
+                    0x7E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                    // 0x7F ~ 0x85
+                    0x86 => indexed!(Add, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                    // 0x87 ~ 0x8D
+                    0x8E => indexed!(Adc, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                    // 0x8F ~ 0x95
+                    0x96 => indexed!(Sub, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    // 0x97 ~ 0x9D
+                    0x9E => indexed!(Sub, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                    // 0x9F ~ 0xA5
+                    0xA6 => indexed!(And, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    // 0xA7 ~ 0xAD
+                    0xAE => indexed!(Xor, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    // 0xAF ~ 0xB5
+                    0xB6 => indexed!(Or, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    // 0xB7 ~ 0xBD
+                    0xBE => indexed!(Cp, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                    // 0xBF ~ 0xCA
+                    0xCB => decode_bit_instruction(bytes, Some(idx))?,
+                    // 0xCC ~ 0xE0
+                    0xE1 => indexed!(Pop, destination: RegisterPairImplied(idx)),
+                    // 0xE2
+                    0xE3 => indexed!(Ex, RegisterPairImplied(idx), MemoryIndirect(SP)),
+                    // 0xE4
+                    0xE5 => indexed!(Push, source: RegisterPairImplied(idx)),
+                    // 0xE6 ~ 0xE8
+                    0xE9 => indexed!(Jp(None), source: MemoryIndirect(idx)),
+                    // 0xEA ~ 0xF8
+                    0xF9 => indexed!(Ld, RegisterPairImplied(idx), RegisterPairImplied(SP)),
+                    // 0xFA ~ 0xFF
+                    _ => return None,
+                },
             }.into()
         }
 
