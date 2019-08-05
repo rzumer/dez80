@@ -52,6 +52,7 @@ pub enum InstructionType {
     Indr,
     Ini,
     Inir,
+    Inva, // Unofficial mnemonic, invalid instruction with no observable side effect; equivalent to NONI followed by NOP
     Jp(Option<Condition>),
     Jr(Option<Condition>),
     Ld,
@@ -60,6 +61,7 @@ pub enum InstructionType {
     Ldi,
     Ldir,
     Neg,
+    Noni, // Unofficial mnemonic, equivalent to NOP but blocks interrupts until the next decode cycle
     Nop,
     Or,
     Otdr,
@@ -88,12 +90,11 @@ pub enum InstructionType {
     Scf,
     Set,
     Sla,
+    Sll, // Unofficial mnemonic, also known as SLS and SL1; shift left and pad with 1
     Sra,
     Srl,
     Sub,
     Xor,
-    Noni, // Unofficial mnemonic, equivalent to NOP but blocks interrupts until the next decode cycle
-    Inva, // Invalid instruction with no observable side effect, equivalent to NONI followed by NOP
 }
 
 impl fmt::Display for InstructionType {
