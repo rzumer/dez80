@@ -24,7 +24,6 @@ pub enum Operand {
     MemoryIndirect(RegisterPairType),
     MemoryIndexed(RegisterPairType, i8),
     MemoryIndexedWithRegisterCopy(RegisterPairType, i8, SingleRegisterType),
-    MemoryZeroPage(u8),
     MemoryIndirectBit(RegisterPairType, u8),
     MemoryIndexedBit(RegisterPairType, i8, u8),
     MemoryIndexedBitWithRegisterCopy(RegisterPairType, i8, u8, SingleRegisterType),
@@ -50,7 +49,6 @@ impl fmt::Display for Operand {
             MemoryIndexedWithRegisterCopy(reg_in, idx, reg_out) => {
                 write!(f, "({} + 0x{:02x}), {}", reg_in, *idx as u8, reg_out)
             }
-            MemoryZeroPage(val) => write!(f, "0x{:02x}", val),
             MemoryIndirectBit(reg, bit) => write!(f, "{}, ({})", bit, reg),
             MemoryIndexedBit(reg, idx, bit) => {
                 write!(f, "{}, ({} + 0x{:02x})", bit, reg, *idx as u8)

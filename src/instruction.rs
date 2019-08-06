@@ -3,6 +3,7 @@ use crate::operation::*;
 use crate::register::*;
 use std::fmt;
 use std::io::{Bytes, Read};
+use std::iter::Peekable;
 
 macro_rules! instruction {
     ($opcode: expr, $type: expr) => {
@@ -255,23 +256,23 @@ impl Instruction {
 
     /// Decodes a single instruction (opcode and operands).
     #[allow(clippy::cognitive_complexity)]
-    fn decode<R: Read>(bytes: &mut Bytes<R>) -> Option<Self> {
+    fn decode<R: Read>(bytes: &mut Peekable<Bytes<R>>) -> Option<Self> {
         /// Flattens the next byte in the stream to an `Option<u8>` value.
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
-        fn next_byte<R: Read>(bytes: &mut Bytes<R>) -> Option<u8> {
+        fn next_byte<R: Read>(bytes: &mut Peekable<Bytes<R>>) -> Option<u8> {
             bytes.next().and_then(|b| b.ok())
         }
 
         /// Flattens the next two bytes in the stream to an `Option<u16>` value.
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
-        fn next_doublet<R: Read>(bytes: &mut Bytes<R>) -> Option<u16> {
+        fn next_doublet<R: Read>(bytes: &mut Peekable<Bytes<R>>) -> Option<u16> {
             Some(u16::from_le_bytes([next_byte(bytes)?, next_byte(bytes)?]))
         }
 
         /// Flattens the next byte in the stream to an `Option<u8>` value.
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
-        fn peek_byte<R: Read>(bytes: &mut Bytes<R>) -> Option<u8> {
-            if let Some(&Ok(val)) = bytes.peekable().peek() {
+        fn peek_byte<R: Read>(bytes: &mut Peekable<Bytes<R>>) -> Option<u8> {
+            if let Some(&Ok(val)) = bytes.peek() {
                 Some(val)
             } else {
                 None
@@ -287,7 +288,7 @@ impl Instruction {
 
         /// Decodes a partial extended instruction, whose opcode is known to begin with `0xED`.
         #[rustfmt::skip]
-        fn decode_extended_instruction<R: Read>(bytes: &mut Bytes<R>) -> Option<Instruction> {
+        fn decode_extended_instruction<R: Read>(bytes: &mut Peekable<Bytes<R>>) -> Option<Instruction> {
             let opcode = next_byte(bytes)?;
 
             macro_rules! extended {
@@ -387,7 +388,7 @@ impl Instruction {
         /// Decodes a partial bit instruction, whose opcode is known to begin with `0xCB`, `0xDDCB`, or `0xFDCB`.
         /// The prefix, ending with `0xCB`, is assumed to have been read already, so only the remainder is read from `bytes`.
         fn decode_bit_instruction<R: Read>(
-            bytes: &mut Bytes<R>,
+            bytes: &mut Peekable<Bytes<R>>,
             index_register: Option<RegisterPairType>,
         ) -> Option<Instruction> {
             // For index bit instructions, the offset is provided before the instruction information.
@@ -415,7 +416,7 @@ impl Instruction {
                 0x40 | 0x48 | 0x50 | 0x58 | 0x60 | 0x68 | 0x70 | 0x78 => Bit,
                 0x80 | 0x88 | 0x90 | 0x98 | 0xA0 | 0xA8 | 0xB0 | 0xB8 => Res,
                 0xC0 | 0xC8 | 0xD0 | 0xD8 | 0xE0 | 0xE8 | 0xF0 | 0xF8 => Set,
-                _ => unreachable!("0x{:02X}", opcode),
+                _ => unreachable!(),
             };
 
             let operand_register = match opcode & 0x07 {
@@ -425,7 +426,7 @@ impl Instruction {
                 0x03 => Some(E),
                 0x04 => Some(H),
                 0x05 => Some(L),
-                0x06 => None, // HL in non-indexed instructions
+                0x06 => None,
                 0x07 => Some(A),
                 _ => unreachable!(),
             };
@@ -464,7 +465,7 @@ impl Instruction {
 
         /// Decodes a partial index instruction, whose opcode is known to begin with `0xDD` or `0xFD`.
         fn decode_index_instruction<R: Read>(
-            bytes: &mut Bytes<R>,
+            bytes: &mut Peekable<Bytes<R>>,
             index_register: RegisterPairType,
         ) -> Option<Instruction> {
             let idx = index_register;
@@ -872,7 +873,7 @@ impl Instruction {
 
     /// Decodes a sequence of instructions, until the end of the stream or an error is reached.
     pub fn from_bytes<R: Read>(reader: &mut R) -> Vec<Instruction> {
-        let mut bytes = reader.bytes();
+        let mut bytes = reader.bytes().peekable();
         let mut instructions = Vec::new();
 
         while let Some(instruction) = Instruction::decode(&mut bytes) {
@@ -885,7 +886,7 @@ impl Instruction {
 
 impl Default for Instruction {
     fn default() -> Self {
-        Instruction::decode(&mut [0x00].bytes()).unwrap()
+        Instruction::decode(&mut [0x00].bytes().peekable()).unwrap()
     }
 }
 
@@ -924,7 +925,7 @@ mod tests {
 
     #[test]
     fn decode_instruction() {
-        let inc_b = Instruction::decode(&mut [0x04].bytes()).unwrap();
+        let inc_b = Instruction::decode(&mut [0x04].bytes().peekable()).unwrap();
         assert_eq!(None, inc_b.source);
         assert_eq!(Some(Operand::RegisterImplied(SingleRegisterType::B)), inc_b.destination);
         assert_eq!(InstructionType::Inc, inc_b.r#type);
@@ -932,20 +933,20 @@ mod tests {
 
     #[test]
     fn decode_incomplete_instruction() {
-        let ld_b = Instruction::decode(&mut [0x06].bytes());
+        let ld_b = Instruction::decode(&mut [0x06].bytes().peekable());
         assert_eq!(None, ld_b);
     }
 
     #[test]
     fn decode_instruction_default() {
-        let nop = Instruction::decode(&mut [0x00].bytes()).unwrap();
+        let nop = Instruction::decode(&mut [0x00].bytes().peekable()).unwrap();
         assert_eq!(Instruction::default(), nop);
     }
 
     #[test]
     fn decode_instruction_cb() {
         for opcode in 0x00..=0xFF {
-            let cb_instruction = Instruction::decode(&mut [0xCB, opcode].bytes());
+            let cb_instruction = Instruction::decode(&mut [0xCB, opcode].bytes().peekable());
             assert!(cb_instruction.is_some());
         }
     }
@@ -953,7 +954,7 @@ mod tests {
     #[test]
     fn decode_instruction_bit() {
         for opcode in 0x40..=0xFF {
-            let bit_instruction = Instruction::decode(&mut [0xCB, opcode].bytes()).unwrap();
+            let bit_instruction = Instruction::decode(&mut [0xCB, opcode].bytes().peekable()).unwrap();
             let offset = 0x40 * (opcode / 0x40);
 
             let expected_instruction = match offset {
@@ -985,7 +986,7 @@ mod tests {
 
     #[test]
     fn display_instruction() {
-        let ld_bc_bytes = &mut [0x01, 0xF0, 0x0F].bytes();
+        let ld_bc_bytes = &mut [0x01, 0xF0, 0x0F].bytes().peekable();
         let ld_bc = Instruction::decode(ld_bc_bytes).unwrap();
         assert_eq!("LD BC, 0x0ff0", ld_bc.to_string());
     }
@@ -1015,7 +1016,7 @@ mod tests {
 
     #[test]
     fn format_invalid_instruction() {
-        let invalid = Instruction::decode(&mut [0xED, 0x04].bytes()).unwrap();
+        let invalid = Instruction::decode(&mut [0xED, 0x04].bytes().peekable()).unwrap();
         assert_eq!("ED 04", format!("{}", invalid));
     }
 }
