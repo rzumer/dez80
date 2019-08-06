@@ -5,20 +5,20 @@ use std::fmt;
 use std::io::{Bytes, Read};
 
 macro_rules! instruction {
-    ($prefix: expr, $type: expr) => {
-        Instruction { prefix: $prefix, r#type: $type, source: None, destination: None }
+    ($opcode: expr, $type: expr) => {
+        Instruction { opcode: $opcode, r#type: $type, source: None, destination: None }
     };
-    ($prefix: expr, $type: expr, source: $src: expr) => {
-        Instruction { prefix: $prefix, r#type: $type, source: Some($src), destination: None }
+    ($opcode: expr, $type: expr, source: $src: expr) => {
+        Instruction { opcode: $opcode, r#type: $type, source: Some($src), destination: None }
     };
-    ($prefix: expr, $type: expr, destination: $dst: expr) => {
-        Instruction { prefix: $prefix, r#type: $type, source: None, destination: Some($dst) }
+    ($opcode: expr, $type: expr, destination: $dst: expr) => {
+        Instruction { opcode: $opcode, r#type: $type, source: None, destination: Some($dst) }
     };
-    ($prefix: expr, $type: expr, destination: $dst: expr, source: $src: expr) => {
-        Instruction { prefix: $prefix, r#type: $type, destination: Some($dst), source: Some($src) }
+    ($opcode: expr, $type: expr, destination: $dst: expr, source: $src: expr) => {
+        Instruction { opcode: $opcode, r#type: $type, destination: Some($dst), source: Some($src) }
     };
-    ($prefix: expr, $type: expr, $src: expr, $dst: expr) => {
-        Instruction { prefix: $prefix, r#type: $type, source: Some($src), destination: Some($dst) }
+    ($opcode: expr, $type: expr, $src: expr, $dst: expr) => {
+        Instruction { opcode: $opcode, r#type: $type, source: Some($src), destination: Some($dst) }
     };
 }
 
@@ -129,16 +129,65 @@ impl fmt::Display for InstructionType {
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum OpcodePrefix {
-    Bitwise,        // 0xCB
-    Extended,       // 0xED
-    Indexed,        // 0xDD or 0xFD
-    IndexedBitwise, // 0xDDCB or 0xFDCB
+    Bitwise,                          // 0xCB
+    Extended,                         // 0xED
+    Indexed(RegisterPairType),        // 0xDD or 0xFD
+    IndexedBitwise(RegisterPairType), // 0xDDCB or 0xFDCB
+}
+
+impl OpcodePrefix {
+    pub fn to_bytes(&self) -> &[u8] {
+        use OpcodePrefix::*;
+        use RegisterPairType::*;
+
+        match self {
+            Bitwise => &[0xCB],
+            Extended => &[0xED],
+            Indexed(IX) => &[0xDD],
+            Indexed(IY) => &[0xFD],
+            IndexedBitwise(IX) => &[0xDD, 0xCB],
+            IndexedBitwise(IY) => &[0xFD, 0xCB],
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl fmt::Display for OpcodePrefix {
+    /// Formats the prefix as its raw byte values.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let bytes = self.to_bytes();
+
+        write!(f, "{:02X}", bytes[0])?;
+
+        for byte in &bytes[1..] {
+            write!(f, " {:02X}", byte)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Opcode {
+    prefix: Option<OpcodePrefix>,
+    value: u8,
+}
+
+impl fmt::Display for Opcode {
+    /// Formats the opcode as a sequence of raw hexadecimal values.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(prefix) = self.prefix {
+            write!(f, "{} {:02X}", prefix, self.value)
+        } else {
+            write!(f, "{:02X}", self.value)
+        }
+    }
 }
 
 /// Represents a single Z80 instruction with machine cycle granularity.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Instruction {
-    prefix: Option<OpcodePrefix>,
+    opcode: Opcode,
     r#type: InstructionType,
     source: Option<Operand>,
     destination: Option<Operand>,
@@ -207,26 +256,6 @@ impl Instruction {
     /// Decodes a single instruction (opcode and operands).
     #[allow(clippy::cognitive_complexity)]
     fn decode<R: Read>(bytes: &mut Bytes<R>) -> Option<Self> {
-        macro_rules! root {
-            ($($args: tt)+) => { instruction!(None, $($args)+) }
-        }
-
-        macro_rules! extended {
-            ($($args: tt)+) => { instruction!(Some(OpcodePrefix::Extended), $($args)+) }
-        }
-
-        macro_rules! bitwise {
-            ($($args: tt)+) => { instruction!(Some(OpcodePrefix::Bitwise), $($args)+) }
-        }
-
-        macro_rules! indexed {
-            ($($args: tt)+) => { instruction!(Some(OpcodePrefix::Indexed), $($args)+) }
-        }
-
-        macro_rules! indexed_bitwise {
-            ($($args: tt)+) => { instruction!(Some(OpcodePrefix::IndexedBitwise), $($args)+) }
-        }
-
         /// Flattens the next byte in the stream to an `Option<u8>` value.
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
         fn next_byte<R: Read>(bytes: &mut Bytes<R>) -> Option<u8> {
@@ -251,6 +280,7 @@ impl Instruction {
 
         use Condition::*;
         use InstructionType::*;
+        use OpcodePrefix::*;
         use Operand::*;
         use RegisterPairType::*;
         use SingleRegisterType::*;
@@ -258,7 +288,13 @@ impl Instruction {
         /// Decodes a partial extended instruction, whose opcode is known to begin with `0xED`.
         #[rustfmt::skip]
         fn decode_extended_instruction<R: Read>(bytes: &mut Bytes<R>) -> Option<Instruction> {
-            match next_byte(bytes)? {
+            let opcode = next_byte(bytes)?;
+
+            macro_rules! extended {
+                ($($args: tt)+) => { instruction!(Opcode { prefix: Some(Extended), value: opcode }, $($args)+) }
+            }
+
+            match opcode {
                 // 0x00 ~ 0x3F
                 0x40 => extended!(In, PortIndirect(C), RegisterImplied(B)),
                 0x41 => extended!(Out, RegisterImplied(B), PortIndirect(C)),
@@ -359,6 +395,14 @@ impl Instruction {
                 if index_register.is_some() { next_byte(bytes)? as i8 } else { Default::default() };
             let opcode = next_byte(bytes)?;
 
+            macro_rules! bitwise {
+                ($($args: tt)+) => { instruction!(Opcode { prefix: Some(Bitwise), value: opcode }, $($args)+) }
+            }
+
+            macro_rules! indexed_bitwise {
+                ($($args: tt)+) => { instruction!(Opcode { prefix: Some(IndexedBitwise(index_register?)), value: opcode }, $($args)+) }
+            }
+
             let instruction = match opcode & 0xF8 {
                 0x00 => Rlc,
                 0x08 => Rrc,
@@ -426,86 +470,100 @@ impl Instruction {
             let idx = index_register;
             assert!(idx == IX || idx == IY);
 
-            match peek_byte(bytes)? {
-                0xDD | 0xFD => indexed!(Noni), // when encountering a double prefix, keep the second one buffered
-                _ => match next_byte(bytes)? {
-                    // 0x00 ~ 0x08
-                    0x09 => indexed!(Add, RegisterPairImplied(BC), RegisterPairImplied(idx)),
-                    // 0x0A ~ 0x18
-                    0x19 => indexed!(Add, RegisterPairImplied(DE), RegisterPairImplied(idx)),
-                    // 0x1A ~ 0x20
-                    0x21 => indexed!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(idx)),
-                    0x22 => indexed!(Ld, RegisterPairImplied(idx), MemoryDirect(next_doublet(bytes)?)),
-                    0x23 => indexed!(Inc, destination: RegisterPairImplied(idx)),
-                    // 0x24 ~ 0x28
-                    0x29 => indexed!(Add, RegisterPairImplied(idx), RegisterPairImplied(idx)),
-                    0x2A => indexed!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(idx)),
-                    0x2B => indexed!(Dec, destination: RegisterPairImplied(idx)),
-                    // 0x2C ~ 0x33
-                    0x34 => indexed!(Inc, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    0x35 => indexed!(Dec, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    0x36 => indexed!(Ld, destination: MemoryIndexed(idx, next_byte(bytes)? as i8), source: OctetImmediate(next_byte(bytes)?)),
-                    // 0x37 ~ 0x38
-                    0x39 => indexed!(Add, RegisterPairImplied(SP), RegisterPairImplied(idx)),
-                    // 0x3A ~ 0x45
-                    0x46 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(B)),
-                    // 0x47 ~ 0x4D
-                    0x4E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(C)),
-                    // 0x4F ~ 0x55
-                    0x56 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(D)),
-                    // 0x57 ~ 0x5D
-                    0x5E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(E)),
-                    // 0x5F ~ 0x65
-                    0x66 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(H)),
-                    // 0x67 ~ 0x6D
-                    0x6E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(L)),
-                    // 0x6F
-                    0x70 => indexed!(Ld, RegisterImplied(B), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    0x71 => indexed!(Ld, RegisterImplied(C), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    0x72 => indexed!(Ld, RegisterImplied(D), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    0x73 => indexed!(Ld, RegisterImplied(E), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    0x74 => indexed!(Ld, RegisterImplied(H), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    0x75 => indexed!(Ld, RegisterImplied(L), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    // 0x76
-                    0x77 => indexed!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    // 0x78 ~ 0x7D
-                    0x7E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                    // 0x7F ~ 0x85
-                    0x86 => indexed!(Add, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                    // 0x87 ~ 0x8D
-                    0x8E => indexed!(Adc, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                    // 0x8F ~ 0x95
-                    0x96 => indexed!(Sub, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    // 0x97 ~ 0x9D
-                    0x9E => indexed!(Sub, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                    // 0x9F ~ 0xA5
-                    0xA6 => indexed!(And, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    // 0xA7 ~ 0xAD
-                    0xAE => indexed!(Xor, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    // 0xAF ~ 0xB5
-                    0xB6 => indexed!(Or, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    // 0xB7 ~ 0xBD
-                    0xBE => indexed!(Cp, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                    // 0xBF ~ 0xCA
-                    0xCB => decode_bit_instruction(bytes, Some(idx))?,
-                    // 0xCC ~ 0xE0
-                    0xE1 => indexed!(Pop, destination: RegisterPairImplied(idx)),
-                    // 0xE2
-                    0xE3 => indexed!(Ex, RegisterPairImplied(idx), MemoryIndirect(SP)),
-                    // 0xE4
-                    0xE5 => indexed!(Push, source: RegisterPairImplied(idx)),
-                    // 0xE6 ~ 0xE8
-                    0xE9 => indexed!(Jp(None), source: MemoryIndirect(idx)),
-                    // 0xEA ~ 0xF8
-                    0xF9 => indexed!(Ld, RegisterPairImplied(idx), RegisterPairImplied(SP)),
-                    // 0xFA ~ 0xFF
-                    _ => return None,
-                },
+            let opcode = peek_byte(bytes)?;
+
+            macro_rules! indexed {
+                ($($args: tt)+) => { instruction!(Opcode { prefix: Some(Indexed(idx)), value: opcode }, $($args)+) }
+            }
+
+            match opcode {
+                0xDD | 0xFD => return Some(indexed!(Noni)), // when decoding a double prefix, save the second one
+                _ => bytes.next(), // otherwise, advance the reader to the next byte
+            };
+
+            match opcode {
+                // 0x00 ~ 0x08
+                0x09 => indexed!(Add, RegisterPairImplied(BC), RegisterPairImplied(idx)),
+                // 0x0A ~ 0x18
+                0x19 => indexed!(Add, RegisterPairImplied(DE), RegisterPairImplied(idx)),
+                // 0x1A ~ 0x20
+                0x21 => indexed!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(idx)),
+                0x22 => indexed!(Ld, RegisterPairImplied(idx), MemoryDirect(next_doublet(bytes)?)),
+                0x23 => indexed!(Inc, destination: RegisterPairImplied(idx)),
+                // 0x24 ~ 0x28
+                0x29 => indexed!(Add, RegisterPairImplied(idx), RegisterPairImplied(idx)),
+                0x2A => indexed!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(idx)),
+                0x2B => indexed!(Dec, destination: RegisterPairImplied(idx)),
+                // 0x2C ~ 0x33
+                0x34 => indexed!(Inc, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x35 => indexed!(Dec, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x36 => indexed!(Ld, destination: MemoryIndexed(idx, next_byte(bytes)? as i8), source: OctetImmediate(next_byte(bytes)?)),
+                // 0x37 ~ 0x38
+                0x39 => indexed!(Add, RegisterPairImplied(SP), RegisterPairImplied(idx)),
+                // 0x3A ~ 0x45
+                0x46 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(B)),
+                // 0x47 ~ 0x4D
+                0x4E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(C)),
+                // 0x4F ~ 0x55
+                0x56 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(D)),
+                // 0x57 ~ 0x5D
+                0x5E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(E)),
+                // 0x5F ~ 0x65
+                0x66 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(H)),
+                // 0x67 ~ 0x6D
+                0x6E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(L)),
+                // 0x6F
+                0x70 => indexed!(Ld, RegisterImplied(B), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x71 => indexed!(Ld, RegisterImplied(C), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x72 => indexed!(Ld, RegisterImplied(D), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x73 => indexed!(Ld, RegisterImplied(E), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x74 => indexed!(Ld, RegisterImplied(H), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                0x75 => indexed!(Ld, RegisterImplied(L), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0x76
+                0x77 => indexed!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0x78 ~ 0x7D
+                0x7E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                // 0x7F ~ 0x85
+                0x86 => indexed!(Add, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                // 0x87 ~ 0x8D
+                0x8E => indexed!(Adc, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                // 0x8F ~ 0x95
+                0x96 => indexed!(Sub, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0x97 ~ 0x9D
+                0x9E => indexed!(Sub, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
+                // 0x9F ~ 0xA5
+                0xA6 => indexed!(And, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0xA7 ~ 0xAD
+                0xAE => indexed!(Xor, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0xAF ~ 0xB5
+                0xB6 => indexed!(Or, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0xB7 ~ 0xBD
+                0xBE => indexed!(Cp, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
+                // 0xBF ~ 0xCA
+                0xCB => decode_bit_instruction(bytes, Some(idx))?,
+                // 0xCC ~ 0xE0
+                0xE1 => indexed!(Pop, destination: RegisterPairImplied(idx)),
+                // 0xE2
+                0xE3 => indexed!(Ex, RegisterPairImplied(idx), MemoryIndirect(SP)),
+                // 0xE4
+                0xE5 => indexed!(Push, source: RegisterPairImplied(idx)),
+                // 0xE6 ~ 0xE8
+                0xE9 => indexed!(Jp(None), source: MemoryIndirect(idx)),
+                // 0xEA ~ 0xF8
+                0xF9 => indexed!(Ld, RegisterPairImplied(idx), RegisterPairImplied(SP)),
+                // 0xFA ~ 0xFF
+                _ => return None,
             }.into()
         }
 
         // Parse the instruction opcode and operands byte by byte.
-        match next_byte(bytes)? {
+        let opcode = next_byte(bytes)?;
+
+        macro_rules! root {
+            ($($args: tt)+) => { instruction!(Opcode { prefix: None, value: opcode }, $($args)+) }
+        }
+
+        match opcode {
             0x00 => root!(Nop),
             0x01 => root!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(BC)),
             0x02 => root!(Ld, RegisterImplied(A), MemoryIndirect(BC)),
@@ -789,17 +847,20 @@ impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use InstructionType::*;
 
-        match (self.source, self.destination) {
-            (Some(src), Some(dst)) => write!(f, "{} {}, {}", self.r#type, dst, src),
-            (Some(operand), None) | (None, Some(operand)) => match self.r#type {
-                // Conditional instructions are written with a separator
-                // between the condition and the operand.
-                Call(Some(_)) | Jp(Some(_)) | Jr(Some(_)) | Ret(Some(_)) => {
-                    write!(f, "{}, {}", self.r#type, operand)
-                }
-                _ => write!(f, "{} {}", self.r#type, operand),
+        match self.r#type {
+            Noni | Inva => write!(f, "{}", self.opcode),
+            _ => match (self.source, self.destination) {
+                (Some(src), Some(dst)) => write!(f, "{} {}, {}", self.r#type, dst, src),
+                (Some(operand), None) | (None, Some(operand)) => match self.r#type {
+                    // Conditional instructions are written with a separator
+                    // between the condition and the operand.
+                    Call(Some(_)) | Jp(Some(_)) | Jr(Some(_)) | Ret(Some(_)) => {
+                        write!(f, "{}, {}", self.r#type, operand)
+                    }
+                    _ => write!(f, "{} {}", self.r#type, operand),
+                },
+                (None, None) => write!(f, "{}", self.r#type),
             },
-            (None, None) => write!(f, "{}", self.r#type),
         }
     }
 }
@@ -807,6 +868,12 @@ impl fmt::Display for Instruction {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn format_opcode_prefix_doublet() {
+        let indexed_bit_ix = OpcodePrefix::IndexedBitwise(RegisterPairType::IX);
+        assert_eq!("DD CB", format!("{}", indexed_bit_ix));
+    }
 
     #[test]
     fn decode_instruction() {
@@ -897,5 +964,11 @@ mod tests {
         while let Some(nop) = instruction_sequence.pop() {
             assert_eq!(Instruction::default(), nop);
         }
+    }
+
+    #[test]
+    fn format_invalid_instruction() {
+        let invalid = Instruction::decode(&mut [0xED, 0x04].bytes()).unwrap();
+        assert_eq!("ED 04", format!("{}", invalid));
     }
 }
