@@ -470,6 +470,11 @@ impl Instruction {
             let idx = index_register;
             assert!(idx == IX || idx == IY);
 
+            let (idx_h, idx_l) = match idx {
+                IX => (IXH, IXL),
+                IY => (IYH, IYL),
+                _ => unreachable!(),
+            };
             let opcode = peek_byte(bytes)?;
 
             macro_rules! indexed {
@@ -490,29 +495,55 @@ impl Instruction {
                 0x21 => indexed!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(idx)),
                 0x22 => indexed!(Ld, RegisterPairImplied(idx), MemoryDirect(next_doublet(bytes)?)),
                 0x23 => indexed!(Inc, destination: RegisterPairImplied(idx)),
-                // 0x24 ~ 0x28
+                0x24 => indexed!(Inc, destination: RegisterImplied(idx_h)),
+                0x25 => indexed!(Dec, destination: RegisterImplied(idx_h)),
+                0x26 => indexed!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(idx_h)),
+                // 0x27 ~ 0x28
                 0x29 => indexed!(Add, RegisterPairImplied(idx), RegisterPairImplied(idx)),
                 0x2A => indexed!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(idx)),
                 0x2B => indexed!(Dec, destination: RegisterPairImplied(idx)),
-                // 0x2C ~ 0x33
+                0x2C => indexed!(Inc, destination: RegisterImplied(idx_l)),
+                0x2D => indexed!(Dec, destination: RegisterImplied(idx_l)),
+                0x2E => indexed!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(idx_l)),
+                // 0x2F ~ 0x33
                 0x34 => indexed!(Inc, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
                 0x35 => indexed!(Dec, destination: MemoryIndexed(idx, next_byte(bytes)? as i8)),
                 0x36 => indexed!(Ld, destination: MemoryIndexed(idx, next_byte(bytes)? as i8), source: OctetImmediate(next_byte(bytes)?)),
                 // 0x37 ~ 0x38
                 0x39 => indexed!(Add, RegisterPairImplied(SP), RegisterPairImplied(idx)),
-                // 0x3A ~ 0x45
+                // 0x3A ~ 0x43
+                0x44 => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(B)),
+                0x45 => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(B)),
                 0x46 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(B)),
-                // 0x47 ~ 0x4D
+                // 0x47 ~ 0x4B
+                0x4C => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(C)),
+                0x4D => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(C)),
                 0x4E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(C)),
-                // 0x4F ~ 0x55
+                // 0x4F ~ 0x53
+                0x54 => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(D)),
+                0x55 => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(D)),
                 0x56 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(D)),
-                // 0x57 ~ 0x5D
+                // 0x57 ~ 0x5B
+                0x5C => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(E)),
+                0x5D => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(E)),
                 0x5E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(E)),
-                // 0x5F ~ 0x65
+                // 0x5F
+                0x60 => indexed!(Ld, RegisterImplied(B), RegisterImplied(idx_h)),
+                0x61 => indexed!(Ld, RegisterImplied(C), RegisterImplied(idx_h)),
+                0x62 => indexed!(Ld, RegisterImplied(D), RegisterImplied(idx_h)),
+                0x63 => indexed!(Ld, RegisterImplied(E), RegisterImplied(idx_h)),
+                0x64 => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(idx_h)),
+                0x65 => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(idx_h)),
                 0x66 => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(H)),
-                // 0x67 ~ 0x6D
+                0x67 => indexed!(Ld, RegisterImplied(A), RegisterImplied(idx_h)),
+                0x68 => indexed!(Ld, RegisterImplied(B), RegisterImplied(idx_l)),
+                0x69 => indexed!(Ld, RegisterImplied(C), RegisterImplied(idx_l)),
+                0x6A => indexed!(Ld, RegisterImplied(D), RegisterImplied(idx_l)),
+                0x6B => indexed!(Ld, RegisterImplied(E), RegisterImplied(idx_l)),
+                0x6C => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(idx_l)),
+                0x6D => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(idx_l)),
                 0x6E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(L)),
-                // 0x6F
+                0x6F => indexed!(Ld, RegisterImplied(A), RegisterImplied(idx_l)),
                 0x70 => indexed!(Ld, RegisterImplied(B), MemoryIndexed(idx, next_byte(bytes)? as i8)),
                 0x71 => indexed!(Ld, RegisterImplied(C), MemoryIndexed(idx, next_byte(bytes)? as i8)),
                 0x72 => indexed!(Ld, RegisterImplied(D), MemoryIndexed(idx, next_byte(bytes)? as i8)),
@@ -523,21 +554,37 @@ impl Instruction {
                 0x77 => indexed!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_byte(bytes)? as i8)),
                 // 0x78 ~ 0x7D
                 0x7E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                // 0x7F ~ 0x85
+                // 0x7F ~ 0x83
+                0x84 => indexed!(Add, RegisterImplied(idx_h), RegisterImplied(A)),
+                0x85 => indexed!(Add, RegisterImplied(idx_l), RegisterImplied(A)),
                 0x86 => indexed!(Add, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                // 0x87 ~ 0x8D
+                // 0x87 ~ 0x8B
+                0x8C => indexed!(Adc, RegisterImplied(idx_h), RegisterImplied(A)),
+                0x8D => indexed!(Adc, RegisterImplied(idx_l), RegisterImplied(A)),
                 0x8E => indexed!(Adc, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                // 0x8F ~ 0x95
+                // 0x8F ~ 0x93
+                0x94 => indexed!(Sub, source: RegisterImplied(idx_h)),
+                0x95 => indexed!(Sub, source: RegisterImplied(idx_l)),
                 0x96 => indexed!(Sub, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0x97 ~ 0x9D
+                // 0x97 ~ 0x9B
+                0x9C => indexed!(Sbc, RegisterImplied(idx_h), RegisterImplied(A)),
+                0x9D => indexed!(Sbc, RegisterImplied(idx_l), RegisterImplied(A)),
                 0x9E => indexed!(Sbc, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
-                // 0x9F ~ 0xA5
+                // 0x9F ~ 0xA3
+                0xA4 => indexed!(And, source: RegisterImplied(idx_h)),
+                0xA5 => indexed!(And, source: RegisterImplied(idx_l)),
                 0xA6 => indexed!(And, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0xA7 ~ 0xAD
+                // 0xA7 ~ 0xAB
+                0xAC => indexed!(Xor, source: RegisterImplied(idx_h)),
+                0xAD => indexed!(Xor, source: RegisterImplied(idx_l)),
                 0xAE => indexed!(Xor, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0xAF ~ 0xB5
+                // 0xAF ~ 0xB3
+                0xB4 => indexed!(Or, source: RegisterImplied(idx_h)),
+                0xB5 => indexed!(Or, source: RegisterImplied(idx_l)),
                 0xB6 => indexed!(Or, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0xB7 ~ 0xBD
+                // 0xB7 ~ 0xBB
+                0xBC => indexed!(Cp, source: RegisterImplied(idx_h)),
+                0xBD => indexed!(Cp, source: RegisterImplied(idx_l)),
                 0xBE => indexed!(Cp, source: MemoryIndexed(idx, next_byte(bytes)? as i8)),
                 // 0xBF ~ 0xCA
                 0xCB => decode_bit_instruction(bytes, Some(idx))?,
