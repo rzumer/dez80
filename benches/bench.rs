@@ -24,6 +24,28 @@ fn bench_instruction_decode_all(c: &mut Criterion) {
     });
 }
 
+fn bench_instruction_to_bytes(c: &mut Criterion) {
+    fn bench_sequential(b: &mut Bencher, instructions: &Vec<Instruction>) {
+        b.iter(|| instructions.iter().flat_map(|i| i.to_bytes()).collect::<Vec<u8>>())
+    }
+
+    fn bench_parallel(b: &mut Bencher, instructions: &Vec<Instruction>) {
+        b.iter(|| instructions.par_iter().flat_map(|i| i.to_bytes()).collect::<Vec<u8>>())
+    }
+
+    let sequential_operations = Fun::new("Sequential", bench_sequential);
+    let parallel_operations = Fun::new("Parallel", bench_parallel);
+
+    let funs = vec![sequential_operations, parallel_operations];
+    let mut instructions = Instruction::from_bytes(&mut INSTRUCTION_STREAM);
+
+    while instructions.len() < 1024 {
+        instructions.append(&mut instructions.clone());
+    }
+
+    c.bench_functions("Instruction::to_bytes", funs, instructions);
+}
+
 fn bench_instruction_operations(c: &mut Criterion) {
     fn bench_sequential(b: &mut Bencher, instructions: &Vec<Instruction>) {
         b.iter(|| instructions.iter().flat_map(|i| i.operations()).collect::<Vec<Operation>>())
@@ -71,6 +93,7 @@ fn bench_instruction_to_string(c: &mut Criterion) {
 criterion_group!(
     instruction,
     bench_instruction_decode_all,
+    bench_instruction_to_bytes,
     bench_instruction_operations,
     bench_instruction_to_string
 );

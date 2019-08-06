@@ -195,6 +195,43 @@ pub struct Instruction {
 }
 
 impl Instruction {
+    /// Provides the raw encoded representation of the instruction.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        use Operand::*;
+
+        let mut bytes = Vec::with_capacity(4);
+
+        if let Some(prefix) = self.opcode.prefix {
+            bytes.extend(prefix.to_bytes());
+        }
+
+        match self.destination {
+            Some(MemoryDirect(addr)) => bytes.extend(&addr.to_le_bytes()),
+            Some(MemoryRelative(offset)) => bytes.push(offset as u8),
+            Some(MemoryIndexed(_, idx)) |
+            Some(MemoryIndexedBit(_, idx, _)) |
+            Some(MemoryIndexedWithRegisterCopy(_, idx, _)) |
+            Some(MemoryIndexedBitWithRegisterCopy(_, idx, _, _)) => bytes.push(idx as u8),
+            _ => (),
+        };
+
+        match self.source {
+            Some(OctetImmediate(val)) => bytes.push(val),
+            Some(DoubletImmediate(val)) => bytes.extend(&val.to_le_bytes()),
+            Some(MemoryDirect(addr)) => bytes.extend(&addr.to_le_bytes()),
+            Some(MemoryRelative(offset)) => bytes.push(offset as u8),
+            Some(MemoryIndexed(_, idx)) |
+            Some(MemoryIndexedBit(_, idx, _)) |
+            Some(MemoryIndexedWithRegisterCopy(_, idx, _)) |
+            Some(MemoryIndexedBitWithRegisterCopy(_, idx, _, _)) => bytes.push(idx as u8),
+            _ => (),
+        };
+
+        bytes.push(self.opcode.value);
+
+        bytes
+    }
+
     /// Breaks down an instruction into a sequence of operations
     /// providing data relevant to their execution.
     pub fn operations(&self) -> Vec<Operation> {
@@ -1018,5 +1055,24 @@ mod tests {
     fn format_invalid_instruction() {
         let invalid = Instruction::decode(&mut [0xED, 0x04].bytes().peekable()).unwrap();
         assert_eq!("ED 04", format!("{}", invalid));
+    }
+
+    #[test]
+    fn get_instruction_bytes() {
+        // Single byte instructions
+        for opcode in 0x00_u8..=0xFF_u8 {
+            let instruction = Instruction::decode(&mut [opcode].bytes().peekable());
+
+            if instruction.is_some() {
+                assert_eq!(vec![opcode], instruction.unwrap().to_bytes());
+            }
+        }
+
+        // Four byte IX bitwise instructions
+        for opcode in 0xDDCB0000_u32..=0xDDCBFFFF_u32 {
+            let bytes = opcode.to_be_bytes();
+            let instruction = Instruction::decode(&mut bytes.bytes().peekable()).unwrap();
+            assert_eq!(bytes.to_vec(), instruction.to_bytes());
+        }
     }
 }
