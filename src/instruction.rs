@@ -599,7 +599,7 @@ impl Instruction {
                 // 0xEA ~ 0xF8
                 0xF9 => indexed!(Ld, RegisterPairImplied(idx), RegisterPairImplied(SP)),
                 // 0xFA ~ 0xFF
-                _ => return None,
+                _ => indexed!(Inva),
             }.into()
         }
 
