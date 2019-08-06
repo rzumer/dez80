@@ -107,13 +107,13 @@ impl fmt::Display for InstructionType {
             Im(val) => format!("{:?} {}", self, val),
             Call(Some(cond)) | Jp(Some(cond)) | Jr(Some(cond)) | Ret(Some(cond)) => match cond {
                 Condition::FlagSet(flag) => match flag {
-                    Flag::PV => "PO".to_string(), // Parity Odd
-                    Flag::S => "P".to_string(),   // Sign Positive
+                    Flag::PV => format!("{:?} PO", self), // Parity Odd
+                    Flag::S => format!("{:?} P", self),   // Sign Positive
                     _ => format!("{:?} {:?}", self, flag),
                 },
                 Condition::FlagNotSet(flag) => match flag {
-                    Flag::PV => "PE".to_string(), // Parity Even
-                    Flag::S => "M".to_string(),   // Sign Negative
+                    Flag::PV => format!("{:?} PE", self), // Parity Even
+                    Flag::S => format!("{:?} M", self),   // Sign Negative
                     _ => format!("{:?} N{:?}", self, flag),
                 },
                 _ => format!("{:?}", self),
