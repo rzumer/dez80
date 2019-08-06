@@ -437,8 +437,8 @@ impl Instruction {
                         None => MemoryIndirect(HL),
                     },
                     Some(idx) => match operand_register {
+                        Some(reg) => MemoryIndexedWithRegisterCopy(idx, offset, reg),
                         None => MemoryIndexed(idx, offset),
-                        _ => return None,
                     },
                 }
             } else {
@@ -449,8 +449,8 @@ impl Instruction {
                         None => MemoryIndirectBit(HL, bit),
                     },
                     Some(idx) => match operand_register {
+                        Some(reg) => MemoryIndexedBitWithRegisterCopy(idx, offset, bit, reg),
                         None => MemoryIndexedBit(idx, offset, bit),
-                        _ => return None,
                     },
                 }
             };
