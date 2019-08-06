@@ -208,10 +208,10 @@ impl Instruction {
         match self.destination {
             Some(MemoryDirect(addr)) => bytes.extend(&addr.to_le_bytes()),
             Some(MemoryRelative(offset)) => bytes.push(offset as u8),
-            Some(MemoryIndexed(_, idx)) |
-            Some(MemoryIndexedBit(_, idx, _)) |
-            Some(MemoryIndexedWithRegisterCopy(_, idx, _)) |
-            Some(MemoryIndexedBitWithRegisterCopy(_, idx, _, _)) => bytes.push(idx as u8),
+            Some(MemoryIndexed(_, idx))
+            | Some(MemoryIndexedBit(_, idx, _))
+            | Some(MemoryIndexedWithRegisterCopy(_, idx, _))
+            | Some(MemoryIndexedBitWithRegisterCopy(_, idx, _, _)) => bytes.push(idx as u8),
             _ => (),
         };
 
@@ -220,10 +220,10 @@ impl Instruction {
             Some(DoubletImmediate(val)) => bytes.extend(&val.to_le_bytes()),
             Some(MemoryDirect(addr)) => bytes.extend(&addr.to_le_bytes()),
             Some(MemoryRelative(offset)) => bytes.push(offset as u8),
-            Some(MemoryIndexed(_, idx)) |
-            Some(MemoryIndexedBit(_, idx, _)) |
-            Some(MemoryIndexedWithRegisterCopy(_, idx, _)) |
-            Some(MemoryIndexedBitWithRegisterCopy(_, idx, _, _)) => bytes.push(idx as u8),
+            Some(MemoryIndexed(_, idx))
+            | Some(MemoryIndexedBit(_, idx, _))
+            | Some(MemoryIndexedWithRegisterCopy(_, idx, _))
+            | Some(MemoryIndexedBitWithRegisterCopy(_, idx, _, _)) => bytes.push(idx as u8),
             _ => (),
         };
 
@@ -991,7 +991,8 @@ mod tests {
     #[test]
     fn decode_instruction_bit() {
         for opcode in 0x40..=0xFF {
-            let bit_instruction = Instruction::decode(&mut [0xCB, opcode].bytes().peekable()).unwrap();
+            let bit_instruction =
+                Instruction::decode(&mut [0xCB, opcode].bytes().peekable()).unwrap();
             let offset = 0x40 * (opcode / 0x40);
 
             let expected_instruction = match offset {
@@ -1069,7 +1070,7 @@ mod tests {
         }
 
         // Four byte IX bitwise instructions
-        for opcode in 0xDDCB0000_u32..=0xDDCBFFFF_u32 {
+        for opcode in 0xDDCB_0000_u32..=0xDDCB_FFFF_u32 {
             let bytes = opcode.to_be_bytes();
             let instruction = Instruction::decode(&mut bytes.bytes().peekable()).unwrap();
             assert_eq!(bytes.to_vec(), instruction.to_bytes());
