@@ -937,11 +937,18 @@ impl Default for Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use InstructionType::*;
+        use OpcodePrefix::*;
 
         match self.r#type {
             Noni | Inva => write!(f, "{}", self.opcode),
             _ => match (self.source, self.destination) {
-                (Some(src), Some(dst)) => write!(f, "{} {}, {}", self.r#type, dst, src),
+                (Some(src), Some(dst)) => match self.opcode {
+                    // 0xED71 is a special case, and some assemblers do not support hexadecimal representation for it.
+                    Opcode { prefix: Some(Extended), value: 0x71 } => {
+                        write!(f, "{} {}, 0", self.r#type, dst)
+                    }
+                    _ => write!(f, "{} {}, {}", self.r#type, dst, src),
+                },
                 (Some(operand), None) | (None, Some(operand)) => match self.r#type {
                     // Conditional instructions are written with a separator
                     // between the condition and the operand.

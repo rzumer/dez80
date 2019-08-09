@@ -379,7 +379,7 @@ OR L
 OTDR
 OTIR
 OUT (0x23), A
-OUT (C), 0x00
+OUT (C), 0
 OUT (C), A
 OUT (C), B
 OUT (C), C
