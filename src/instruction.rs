@@ -1,3 +1,21 @@
+//! Contains models and functions associated with Z80 instructions,
+//! including decoding, formatting and decomposition into operations.
+//!
+//! # Examples
+//!
+//! ```
+//! use std::io::Read;
+//! use dez80::instruction::Instruction;
+//!
+//! // Initialize a buffer containing raw Z80 opcodes.
+//! let mut data: &[u8] = &[0x00]; // NOP
+//!
+//! // Decode a sequence of instructions from the raw data.
+//! if let Some(instruction) = Instruction::from_bytes(&mut data).first() {
+//!     println!("Decoded {}.", instruction);
+//! }
+//! ```
+
 use crate::common::{Condition, Operand};
 use crate::operation::*;
 use crate::register::*;

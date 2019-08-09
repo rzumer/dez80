@@ -1,3 +1,7 @@
+//! Contains models and functions associated with Z80 instruction behavior.
+//! This is mostly relevant for implementations concerned with implementing
+//! or analyzing a Z80 system, such as emulators or debuggers.
+
 use crate::common::{Condition, Operand};
 
 macro_rules! operation {

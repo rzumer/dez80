@@ -1,3 +1,6 @@
+//! Contains models and functions used to manage a Z80 processor's internal storage,
+//! including single registers, register pairs, and status flags.
+
 use std::fmt;
 use strum_macros::Display;
 

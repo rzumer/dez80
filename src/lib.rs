@@ -1,3 +1,5 @@
+//! Provides Z80 disassembly and analysis models and functions.
+
 extern crate strum;
 extern crate strum_macros;
 

@@ -1,3 +1,5 @@
+//! Contains models and functions that are shared between other modules.
+
 use crate::register::*;
 use std::fmt;
 
