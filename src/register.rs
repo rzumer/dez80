@@ -1,4 +1,5 @@
 use std::fmt;
+use strum_macros::Display;
 
 macro_rules! impl_display_register {
     ($( $ident: ident ),*) => (
@@ -96,7 +97,7 @@ impl RegisterPair {
 
 /// Represents individual Z80 status flags.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Display, PartialEq)]
 pub enum Flag {
     S = 0b1000_0000,
     Z = 0b0100_0000,

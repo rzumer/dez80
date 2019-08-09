@@ -117,12 +117,12 @@ impl fmt::Display for InstructionType {
                 Condition::FlagSet(flag) => match flag {
                     Flag::PV => write!(f, " PO"), // Parity Odd
                     Flag::S => write!(f, " P"),   // Sign Positive
-                    _ => write!(f, " {:?}", flag),
+                    _ => write!(f, " {}", flag),
                 },
                 Condition::FlagNotSet(flag) => match flag {
                     Flag::PV => write!(f, " PE"), // Parity Even
                     Flag::S => write!(f, " M"),   // Sign Negative
-                    _ => write!(f, " N{:?}", flag),
+                    _ => write!(f, " N{}", flag),
                 },
                 _ => Ok(()),
             },
