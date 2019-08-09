@@ -171,7 +171,7 @@ DEC IY
 DEC L
 DEC SP
 DI
-DJNZ 0xa3
+DJNZ 0xfe
 EI
 EX (SP), HL
 EX (SP), IX
