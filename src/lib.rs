@@ -1,3 +1,6 @@
+extern crate strum;
+extern crate strum_macros;
+
 #[macro_use]
 pub mod operation;
 mod common;

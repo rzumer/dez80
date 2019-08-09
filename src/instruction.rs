@@ -4,6 +4,7 @@ use crate::register::*;
 use std::fmt;
 use std::io::{Bytes, Read};
 use std::iter::Peekable;
+use strum_macros::IntoStaticStr;
 
 macro_rules! instruction {
     ($opcode: expr, $type: expr) => {
@@ -24,7 +25,7 @@ macro_rules! instruction {
 }
 
 /// Represents a type of instruction, categorized by mnemonic.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, IntoStaticStr, PartialEq)]
 pub enum InstructionType {
     Adc,
     Add,
@@ -103,27 +104,32 @@ impl fmt::Display for InstructionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use InstructionType::*;
 
-        let formatted = match self {
-            Im(val) => format!("{:?} {}", self, val),
+        // Write the instruction mnemonic
+        let type_upper = <&'static str>::from(self).to_ascii_uppercase();
+        write!(f, "{}", type_upper)?;
+
+        // If the instruction type has an associated value, write it as needed
+        match self {
+            // IM: Write the associated integer directly
+            Im(val) => write!(f, " {}", val),
+            // Conditional instructions: format the associated condition as its standard abbreviation
             Call(Some(cond)) | Jp(Some(cond)) | Jr(Some(cond)) | Ret(Some(cond)) => match cond {
                 Condition::FlagSet(flag) => match flag {
-                    Flag::PV => format!("{:?} PO", self), // Parity Odd
-                    Flag::S => format!("{:?} P", self),   // Sign Positive
-                    _ => format!("{:?} {:?}", self, flag),
+                    Flag::PV => write!(f, " PO"), // Parity Odd
+                    Flag::S => write!(f, " P"),   // Sign Positive
+                    _ => write!(f, " {:?}", flag),
                 },
                 Condition::FlagNotSet(flag) => match flag {
-                    Flag::PV => format!("{:?} PE", self), // Parity Even
-                    Flag::S => format!("{:?} M", self),   // Sign Negative
-                    _ => format!("{:?} N{:?}", self, flag),
+                    Flag::PV => write!(f, " PE"), // Parity Even
+                    Flag::S => write!(f, " M"),   // Sign Negative
+                    _ => write!(f, " N{:?}", flag),
                 },
-                _ => format!("{:?}", self),
+                _ => Ok(()),
             },
-            Rst(val) => format!("{:?} {:02X}", self, val),
-            _ => format!("{:?}", self),
-        };
-
-        // Write out the capitalized enum variant name.
-        write!(f, "{}", formatted.to_ascii_uppercase())
+            // RST: Write the associated address in hexadecimal form
+            Rst(val) => write!(f, " 0x{:02x}", val),
+            _ => Ok(()),
+        }
     }
 }
 
@@ -679,7 +685,7 @@ impl Instruction {
             0x1B => root!(Dec, destination: RegisterPairImplied(DE)),
             0x1C => root!(Inc, destination: RegisterImplied(E)),
             0x1D => root!(Dec, destination: RegisterImplied(E)),
-            0x1E => root!(Ld, RegisterImplied(E), OctetImmediate(next_byte(bytes)?)),
+            0x1E => root!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(E)),
             0x1F => root!(Rra),
             0x20 => root!(Jr(Some(FlagNotSet(Flag::Z))), source: OctetImmediate(next_byte(bytes)?)),
             0x21 => root!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(HL)),
@@ -695,7 +701,7 @@ impl Instruction {
             0x2B => root!(Dec, destination: RegisterPairImplied(HL)),
             0x2C => root!(Inc, destination: RegisterImplied(L)),
             0x2D => root!(Dec, destination: RegisterImplied(L)),
-            0x2E => root!(Ld, RegisterImplied(L), OctetImmediate(next_byte(bytes)?)),
+            0x2E => root!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(L)),
             0x2F => root!(Cpl),
             0x30 => root!(Jr(Some(FlagNotSet(Flag::C))), source: OctetImmediate(next_byte(bytes)?)),
             0x31 => root!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(SP)),
@@ -711,7 +717,7 @@ impl Instruction {
             0x3B => root!(Dec, destination: RegisterPairImplied(SP)),
             0x3C => root!(Inc, destination: RegisterImplied(A)),
             0x3D => root!(Dec, destination: RegisterImplied(A)),
-            0x3E => root!(Ld, RegisterImplied(A), OctetImmediate(next_byte(bytes)?)),
+            0x3E => root!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(A)),
             0x3F => root!(Ccf),
             0x40 => root!(Ld, RegisterImplied(B), RegisterImplied(B)),
             0x41 => root!(Ld, RegisterImplied(C), RegisterImplied(B)),
@@ -720,7 +726,7 @@ impl Instruction {
             0x44 => root!(Ld, RegisterImplied(H), RegisterImplied(B)),
             0x45 => root!(Ld, RegisterImplied(L), RegisterImplied(B)),
             0x46 => root!(Ld, MemoryIndirect(HL), RegisterImplied(B)),
-            0x47 => root!(Ld, RegisterImplied(A), RegisterImplied(C)),
+            0x47 => root!(Ld, RegisterImplied(A), RegisterImplied(B)),
             0x48 => root!(Ld, RegisterImplied(B), RegisterImplied(C)),
             0x49 => root!(Ld, RegisterImplied(C), RegisterImplied(C)),
             0x4A => root!(Ld, RegisterImplied(D), RegisterImplied(C)),
@@ -868,7 +874,7 @@ impl Instruction {
             0xD8 => root!(Ret(Some(FlagSet(Flag::C)))),
             0xD9 => root!(Exx),
             0xDA => root!(Jp(Some(FlagSet(Flag::C))), source: DoubletImmediate(next_doublet(bytes)?)),
-            0xDB => root!(Out, PortDirect(next_byte(bytes)?), RegisterImplied(A)),
+            0xDB => root!(In, PortDirect(next_byte(bytes)?), RegisterImplied(A)),
             0xDC => root!(Call(Some(FlagSet(Flag::C))), source: DoubletImmediate(next_doublet(bytes)?)),
             0xDD => decode_index_instruction(bytes, IX)?,
             0xDE => root!(Sbc, OctetImmediate(next_byte(bytes)?), RegisterImplied(A)),

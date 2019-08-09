@@ -1,0 +1,696 @@
+ADC A, 0x23
+ADC A, (HL)
+ADC A, (IX + 0x45)
+ADC A, (IY + 0x45)
+ADC A, A
+ADC A, B
+ADC A, C
+ADC A, D
+ADC A, E
+ADC A, H
+ADC A, L
+ADC HL, BC
+ADC HL, DE
+ADC HL, HL
+ADC HL, SP
+ADD A, 0x23
+ADD A, (HL)
+ADD A, (IX + 0x45)
+ADD A, (IY + 0x45)
+ADD A, A
+ADD A, B
+ADD A, C
+ADD A, D
+ADD A, E
+ADD A, H
+ADD A, L
+ADD HL, BC
+ADD HL, DE
+ADD HL, HL
+ADD HL, SP
+ADD IX, BC
+ADD IX, DE
+ADD IX, IX
+ADD IX, SP
+ADD IY, BC
+ADD IY, DE
+ADD IY, IY
+ADD IY, SP
+AND 0x23
+AND (HL)
+AND (IX + 0x45)
+AND (IY + 0x45)
+AND A
+AND B
+AND C
+AND D
+AND E
+AND H
+AND L
+BIT 0, (HL)
+BIT 1, (HL)
+BIT 2, (HL)
+BIT 3, (HL)
+BIT 4, (HL)
+BIT 5, (HL)
+BIT 6, (HL)
+BIT 7, (HL)
+BIT 0, (IX + 0x45)
+BIT 1, (IX + 0x45)
+BIT 2, (IX + 0x45)
+BIT 3, (IX + 0x45)
+BIT 4, (IX + 0x45)
+BIT 5, (IX + 0x45)
+BIT 6, (IX + 0x45)
+BIT 7, (IX + 0x45)
+BIT 0, (IY + 0x45)
+BIT 1, (IY + 0x45)
+BIT 2, (IY + 0x45)
+BIT 3, (IY + 0x45)
+BIT 4, (IY + 0x45)
+BIT 5, (IY + 0x45)
+BIT 6, (IY + 0x45)
+BIT 7, (IY + 0x45)
+BIT 0, A
+BIT 1, A
+BIT 2, A
+BIT 3, A
+BIT 4, A
+BIT 5, A
+BIT 6, A
+BIT 7, A
+BIT 0, B
+BIT 1, B
+BIT 2, B
+BIT 3, B
+BIT 4, B
+BIT 5, B
+BIT 6, B
+BIT 7, B
+BIT 0, C
+BIT 1, C
+BIT 2, C
+BIT 3, C
+BIT 4, C
+BIT 5, C
+BIT 6, C
+BIT 7, C
+BIT 0, D
+BIT 1, D
+BIT 2, D
+BIT 3, D
+BIT 4, D
+BIT 5, D
+BIT 6, D
+BIT 7, D
+BIT 0, E
+BIT 1, E
+BIT 2, E
+BIT 3, E
+BIT 4, E
+BIT 5, E
+BIT 6, E
+BIT 7, E
+BIT 0, H
+BIT 1, H
+BIT 2, H
+BIT 3, H
+BIT 4, H
+BIT 5, H
+BIT 6, H
+BIT 7, H
+BIT 0, L
+BIT 1, L
+BIT 2, L
+BIT 3, L
+BIT 4, L
+BIT 5, L
+BIT 6, L
+BIT 7, L
+CALL 0x1234
+CALL C, 0x1234
+CALL M, 0x1234
+CALL NC, 0x1234
+CALL NZ, 0x1234
+CALL P, 0x1234
+CALL PE, 0x1234
+CALL PO, 0x1234
+CALL Z, 0x1234
+CCF
+CP 0x23
+CP (HL)
+CP (IX + 0x45)
+CP (IY + 0x45)
+CP A
+CP B
+CP C
+CP D
+CP E
+CP H
+CP L
+CPD
+CPDR
+CPI
+CPIR
+CPL
+DAA
+DEC (HL)
+DEC (IX + 0x45)
+DEC (IY + 0x45)
+DEC A
+DEC B
+DEC BC
+DEC C
+DEC D
+DEC DE
+DEC E
+DEC H
+DEC HL
+DEC IX
+DEC IY
+DEC L
+DEC SP
+DI
+DJNZ 0xa3
+EI
+EX (SP), HL
+EX (SP), IX
+EX (SP), IY
+EX AF, AF'
+EX DE, HL
+EXX
+HALT
+IM 0
+IM 1
+IM 2
+IN A, (0x23)
+IN A, (C)
+IN B, (C)
+IN C, (C)
+IN D, (C)
+IN E, (C)
+IN H, (C)
+IN L, (C)
+INC (HL)
+INC (IX + 0x45)
+INC (IY + 0x45)
+INC A
+INC B
+INC BC
+INC C
+INC D
+INC DE
+INC E
+INC H
+INC HL
+INC IX
+INC IY
+INC L
+INC SP
+IND
+INDR
+INI
+INIR
+JP (HL)
+JP (IX)
+JP (IY)
+JP 0x1234
+JP C, 0x1234
+JP M, 0x1234
+JP NC, 0x1234
+JP NZ, 0x1234
+JP P, 0x1234
+JP PE, 0x1234
+JP PO, 0x1234
+JP Z, 0x1234
+JR 0xfe
+JR C, 0xfe
+JR NC, 0xfe
+JR NZ, 0xfe
+JR Z, 0xfe
+LD (0x1234), A
+LD (0x1234), BC
+LD (0x1234), DE
+LD (0x1234), HL
+LD (0x1234), IX
+LD (0x1234), IY
+LD (0x1234), SP
+LD (BC), A
+LD (DE), A
+LD (HL), 0x23
+LD (HL), A
+LD (HL), B
+LD (HL), C
+LD (HL), D
+LD (HL), E
+LD (HL), H
+LD (HL), L
+LD (IX + 0x45), 0x23
+LD (IX + 0x45), A
+LD (IX + 0x45), B
+LD (IX + 0x45), C
+LD (IX + 0x45), D
+LD (IX + 0x45), E
+LD (IX + 0x45), H
+LD (IX + 0x45), L
+LD (IY + 0x45), 0x23
+LD (IY + 0x45), A
+LD (IY + 0x45), B
+LD (IY + 0x45), C
+LD (IY + 0x45), D
+LD (IY + 0x45), E
+LD (IY + 0x45), H
+LD (IY + 0x45), L
+LD A, 0x23
+LD A, (0x1234)
+LD A, (BC)
+LD A, (DE)
+LD A, (HL)
+LD A, (IX + 0x45)
+LD A, (IY + 0x45)
+LD A, A
+LD A, B
+LD A, C
+LD A, D
+LD A, E
+LD A, H
+LD A, I
+LD A, L
+LD A, R
+LD B, 0x23
+LD B, (HL)
+LD B, (IX + 0x45)
+LD B, (IY + 0x45)
+LD B, A
+LD B, B
+LD B, C
+LD B, D
+LD B, E
+LD B, H
+LD B, L
+LD BC, (0x1234)
+LD BC, 0x1234
+LD C, 0x23
+LD C, (HL)
+LD C, (IX + 0x45)
+LD C, (IY + 0x45)
+LD C, A
+LD C, B
+LD C, C
+LD C, D
+LD C, E
+LD C, H
+LD C, L
+LD D, 0x23
+LD D, (HL)
+LD D, (IX + 0x45)
+LD D, (IY + 0x45)
+LD D, A
+LD D, B
+LD D, C
+LD D, D
+LD D, E
+LD D, H
+LD D, L
+LD DE, (0x1234)
+LD DE, 0x1234
+LD E, 0x23
+LD E, (HL)
+LD E, (IX + 0x45)
+LD E, (IY + 0x45)
+LD E, A
+LD E, B
+LD E, C
+LD E, D
+LD E, E
+LD E, H
+LD E, L
+LD H, 0x23
+LD H, (HL)
+LD H, (IX + 0x45)
+LD H, (IY + 0x45)
+LD H, A
+LD H, B
+LD H, C
+LD H, D
+LD H, E
+LD H, H
+LD H, L
+LD HL, (0x1234)
+LD HL, 0x1234
+LD I, A
+LD IX, (0x1234)
+LD IX, 0x1234
+LD IY, (0x1234)
+LD IY, 0x1234
+LD L, 0x23
+LD L, (HL)
+LD L, (IX + 0x45)
+LD L, (IY + 0x45)
+LD L, A
+LD L, B
+LD L, C
+LD L, D
+LD L, E
+LD L, H
+LD L, L
+LD SP, (0x1234)
+LD SP, 0x1234
+LD SP, HL
+LD SP, IX
+LD SP, IY
+LDD
+LDDR
+LDI
+LDIR
+NEG
+NOP
+OR 0x23
+OR (HL)
+OR (IX + 0x45)
+OR (IY + 0x45)
+OR A
+OR B
+OR C
+OR D
+OR E
+OR H
+OR L
+OTDR
+OTIR
+OUT (0x23), A
+OUT (C), 0x00
+OUT (C), A
+OUT (C), B
+OUT (C), C
+OUT (C), D
+OUT (C), E
+OUT (C), H
+OUT (C), L
+OUTD
+OUTI
+POP AF
+POP BC
+POP DE
+POP HL
+POP IX
+POP IY
+PUSH AF
+PUSH BC
+PUSH DE
+PUSH HL
+PUSH IX
+PUSH IY
+RES 0, (HL)
+RES 1, (HL)
+RES 2, (HL)
+RES 3, (HL)
+RES 4, (HL)
+RES 5, (HL)
+RES 6, (HL)
+RES 7, (HL)
+RES 0, (IX + 0x45)
+RES 1, (IX + 0x45)
+RES 2, (IX + 0x45)
+RES 3, (IX + 0x45)
+RES 4, (IX + 0x45)
+RES 5, (IX + 0x45)
+RES 6, (IX + 0x45)
+RES 7, (IX + 0x45)
+RES 0, (IY + 0x45)
+RES 1, (IY + 0x45)
+RES 2, (IY + 0x45)
+RES 3, (IY + 0x45)
+RES 4, (IY + 0x45)
+RES 5, (IY + 0x45)
+RES 6, (IY + 0x45)
+RES 7, (IY + 0x45)
+RES 0, A
+RES 1, A
+RES 2, A
+RES 3, A
+RES 4, A
+RES 5, A
+RES 6, A
+RES 7, A
+RES 0, B
+RES 1, B
+RES 2, B
+RES 3, B
+RES 4, B
+RES 5, B
+RES 6, B
+RES 7, B
+RES 0, C
+RES 1, C
+RES 2, C
+RES 3, C
+RES 4, C
+RES 5, C
+RES 6, C
+RES 7, C
+RES 0, D
+RES 1, D
+RES 2, D
+RES 3, D
+RES 4, D
+RES 5, D
+RES 6, D
+RES 7, D
+RES 0, E
+RES 1, E
+RES 2, E
+RES 3, E
+RES 4, E
+RES 5, E
+RES 6, E
+RES 7, E
+RES 0, H
+RES 1, H
+RES 2, H
+RES 3, H
+RES 4, H
+RES 5, H
+RES 6, H
+RES 7, H
+RES 0, L
+RES 1, L
+RES 2, L
+RES 3, L
+RES 4, L
+RES 5, L
+RES 6, L
+RES 7, L
+RET
+RET C
+RET M
+RET NC
+RET NZ
+RET P
+RET PE
+RET PO
+RET Z
+RETI
+RETN
+RL (HL)
+RL (IX + 0x45)
+RL (IY + 0x45)
+RL A
+RL B
+RL C
+RL D
+RL E
+RL H
+RL L
+RLA
+RLC (HL)
+RLC (IX + 0x45)
+RLC (IY + 0x45)
+RLC A
+RLC B
+RLC C
+RLC D
+RLC E
+RLC H
+RLC L
+RLCA
+RLD
+RR (HL)
+RR (IX + 0x45)
+RR (IY + 0x45)
+RR A
+RR B
+RR C
+RR D
+RR E
+RR H
+RR L
+RRA
+RRC (HL)
+RRC (IX + 0x45)
+RRC (IY + 0x45)
+RRC A
+RRC B
+RRC C
+RRC D
+RRC E
+RRC H
+RRC L
+RRCA
+RRD
+RST 0x00
+RST 0x08
+RST 0x10
+RST 0x18
+RST 0x20
+RST 0x28
+RST 0x30
+RST 0x38
+SBC A, 0x23
+SBC A, (HL)
+SBC A, (IX + 0x45)
+SBC A, (IY + 0x45)
+SBC A, A
+SBC A, B
+SBC A, C
+SBC A, D
+SBC A, E
+SBC A, H
+SBC A, L
+SBC HL, BC
+SBC HL, DE
+SBC HL, HL
+SBC HL, SP
+SCF
+SET 0, (HL)
+SET 1, (HL)
+SET 2, (HL)
+SET 3, (HL)
+SET 4, (HL)
+SET 5, (HL)
+SET 6, (HL)
+SET 7, (HL)
+SET 0, (IX + 0x45)
+SET 1, (IX + 0x45)
+SET 2, (IX + 0x45)
+SET 3, (IX + 0x45)
+SET 4, (IX + 0x45)
+SET 5, (IX + 0x45)
+SET 6, (IX + 0x45)
+SET 7, (IX + 0x45)
+SET 0, (IY + 0x45)
+SET 1, (IY + 0x45)
+SET 2, (IY + 0x45)
+SET 3, (IY + 0x45)
+SET 4, (IY + 0x45)
+SET 5, (IY + 0x45)
+SET 6, (IY + 0x45)
+SET 7, (IY + 0x45)
+SET 0, A
+SET 1, A
+SET 2, A
+SET 3, A
+SET 4, A
+SET 5, A
+SET 6, A
+SET 7, A
+SET 0, B
+SET 1, B
+SET 2, B
+SET 3, B
+SET 4, B
+SET 5, B
+SET 6, B
+SET 7, B
+SET 0, C
+SET 1, C
+SET 2, C
+SET 3, C
+SET 4, C
+SET 5, C
+SET 6, C
+SET 7, C
+SET 0, D
+SET 1, D
+SET 2, D
+SET 3, D
+SET 4, D
+SET 5, D
+SET 6, D
+SET 7, D
+SET 0, E
+SET 1, E
+SET 2, E
+SET 3, E
+SET 4, E
+SET 5, E
+SET 6, E
+SET 7, E
+SET 0, H
+SET 1, H
+SET 2, H
+SET 3, H
+SET 4, H
+SET 5, H
+SET 6, H
+SET 7, H
+SET 0, L
+SET 1, L
+SET 2, L
+SET 3, L
+SET 4, L
+SET 5, L
+SET 6, L
+SET 7, L
+SLA (HL)
+SLA (IX + 0x45)
+SLA (IY + 0x45)
+SLA A
+SLA B
+SLA C
+SLA D
+SLA E
+SLA H
+SLA L
+SRA (HL)
+SRA (IX + 0x45)
+SRA (IY + 0x45)
+SRA A
+SRA B
+SRA C
+SRA D
+SRA E
+SRA H
+SRA L
+SRL (HL)
+SRL (IX + 0x45)
+SRL (IY + 0x45)
+SRL A
+SRL B
+SRL C
+SRL D
+SRL E
+SRL H
+SRL L
+SUB 0x23
+SUB (HL)
+SUB (IX + 0x45)
+SUB (IY + 0x45)
+SUB A
+SUB B
+SUB C
+SUB D
+SUB E
+SUB H
+SUB L
+XOR 0x23
+XOR (HL)
+XOR (IX + 0x45)
+XOR (IY + 0x45)
+XOR A
+XOR B
+XOR C
+XOR D
+XOR E
+XOR H
+XOR L
