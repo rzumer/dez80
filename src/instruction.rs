@@ -234,8 +234,8 @@ impl Instruction {
             Some(MemoryRelative(offset)) => bytes.push(offset as u8),
             Some(MemoryIndexed(_, idx))
             | Some(MemoryIndexedBit(_, idx, _))
-            | Some(MemoryIndexedWithRegisterCopy(_, idx, _))
-            | Some(MemoryIndexedBitWithRegisterCopy(_, idx, _, _)) => bytes.push(idx as u8),
+            | Some(MemoryIndexedAndRegister(_, idx, _))
+            | Some(MemoryIndexedBitAndRegister(_, idx, _, _)) => bytes.push(idx as u8),
             _ => (),
         };
 
@@ -246,8 +246,8 @@ impl Instruction {
             Some(MemoryRelative(offset)) => bytes.push(offset as u8),
             Some(MemoryIndexed(_, idx))
             | Some(MemoryIndexedBit(_, idx, _))
-            | Some(MemoryIndexedWithRegisterCopy(_, idx, _))
-            | Some(MemoryIndexedBitWithRegisterCopy(_, idx, _, _)) => bytes.push(idx as u8),
+            | Some(MemoryIndexedAndRegister(_, idx, _))
+            | Some(MemoryIndexedBitAndRegister(_, idx, _, _)) => bytes.push(idx as u8),
             _ => (),
         };
 
@@ -499,7 +499,7 @@ impl Instruction {
                         None => MemoryIndirect(HL),
                     },
                     Some(idx) => match operand_register {
-                        Some(reg) => MemoryIndexedWithRegisterCopy(idx, offset, reg),
+                        Some(reg) => MemoryIndexedAndRegister(idx, offset, reg),
                         None => MemoryIndexed(idx, offset),
                     },
                 }
@@ -511,7 +511,7 @@ impl Instruction {
                         None => MemoryIndirectBit(HL, bit),
                     },
                     Some(idx) => match operand_register {
-                        Some(reg) => MemoryIndexedBitWithRegisterCopy(idx, offset, bit, reg),
+                        Some(reg) => MemoryIndexedBitAndRegister(idx, offset, bit, reg),
                         None => MemoryIndexedBit(idx, offset, bit),
                     },
                 }
@@ -1036,8 +1036,7 @@ mod tests {
 
             let expected_bit = (opcode - offset) / 8;
             let actual_bit = match bit_instruction.destination.unwrap() {
-                Operand::RegisterBitImplied(_, val) => val,
-                Operand::MemoryIndirectBit(_, val) => val,
+                Operand::RegisterBitImplied(_, val) | Operand::MemoryIndirectBit(_, val) => val,
                 _ => panic!("Unexpected decoded operand"),
             };
 
