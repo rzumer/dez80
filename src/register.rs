@@ -62,10 +62,35 @@ pub enum RegisterPairType {
     PC,
     SP,
     IR,
+    WZ,
     AF_,
     BC_,
     DE_,
     HL_,
+}
+
+impl RegisterPairType {
+    pub fn to_single_register_types(self) -> (SingleRegisterType, SingleRegisterType) {
+        use RegisterPairType::*;
+        use SingleRegisterType::*;
+
+        match self {
+            AF => (A, F),
+            BC => (B, C),
+            DE => (D, E),
+            HL => (H, L),
+            IX => (IXH, IXL),
+            IY => (IYH, IYL),
+            PC => (PCH, PCL),
+            SP => (SPH, SPL),
+            IR => (I, R),
+            WZ => (W, Z),
+            AF_ => (A_, F_),
+            BC_ => (B_, C_),
+            DE_ => (D_, E_),
+            HL_ => (H_, L_),
+        }
+    }
 }
 
 impl_display_register!(SingleRegisterType, RegisterPairType);
