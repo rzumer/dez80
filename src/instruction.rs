@@ -16,8 +16,6 @@
 //! }
 //! ```
 
-use crate::common::{Condition, Operand};
-use crate::operation::*;
 use crate::register::*;
 use std::fmt;
 use std::io::{Bytes, Read};
@@ -40,6 +38,67 @@ macro_rules! instruction {
     ($opcode: expr, $type: expr, $src: expr, $dst: expr) => {
         Instruction { opcode: $opcode, r#type: $type, source: Some($src), destination: Some($dst) }
     };
+}
+
+/// Represents a prerequisite condition for an instruction.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Condition {
+    FlagSet(Flag),
+    FlagNotSet(Flag),
+    RegisterZero(SingleRegisterType),
+    RegisterPairZero(RegisterPairType),
+}
+
+/// Represents a target for data operations.
+/// Variants are closely related to Z80 addressing modes.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Operand {
+    OctetImmediate(u8),
+    DoubletImmediate(u16),
+    RegisterImplied(SingleRegisterType),
+    RegisterPairImplied(RegisterPairType),
+    RegisterBitImplied(SingleRegisterType, u8),
+    MemoryDirect(u16),
+    MemoryRelative(i8),
+    MemoryIndirect(RegisterPairType),
+    MemoryIndexed(RegisterPairType, i8),
+    MemoryIndexedAndRegister(RegisterPairType, i8, SingleRegisterType),
+    MemoryIndirectBit(RegisterPairType, u8),
+    MemoryIndexedBit(RegisterPairType, i8, u8),
+    MemoryIndexedBitAndRegister(RegisterPairType, i8, u8, SingleRegisterType),
+    PortDirect(u8),
+    PortIndirect(SingleRegisterType),
+}
+
+impl fmt::Display for Operand {
+    /// Formats operands based on standard notation.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Operand::*;
+
+        match self {
+            OctetImmediate(val) => write!(f, "0x{:02x}", val),
+            DoubletImmediate(val) => write!(f, "0x{:04x}", val),
+            RegisterImplied(reg) => write!(f, "{}", reg),
+            RegisterPairImplied(reg) => write!(f, "{}", reg),
+            RegisterBitImplied(reg, bit) => write!(f, "{}, {}", bit, reg),
+            MemoryDirect(val) => write!(f, "(0x{:04x})", val.to_le()),
+            MemoryRelative(val) => write!(f, "0x{:02x}", *val as u8),
+            MemoryIndirect(reg) => write!(f, "({})", reg),
+            MemoryIndexed(reg, idx) => write!(f, "({} + 0x{:02x})", reg, *idx as u8),
+            MemoryIndexedAndRegister(reg_in, idx, reg_out) => {
+                write!(f, "({} + 0x{:02x}), {}", reg_in, *idx as u8, reg_out)
+            }
+            MemoryIndirectBit(reg, bit) => write!(f, "{}, ({})", bit, reg),
+            MemoryIndexedBit(reg, idx, bit) => {
+                write!(f, "{}, ({} + 0x{:02x})", bit, reg, *idx as u8)
+            }
+            MemoryIndexedBitAndRegister(reg_in, idx, bit, reg_out) => {
+                write!(f, "{}, ({} + 0x{:02x}), {}", bit, reg_in, *idx as u8, reg_out)
+            }
+            PortDirect(val) => write!(f, "(0x{:02x})", val),
+            PortIndirect(reg) => write!(f, "({})", reg),
+        }
+    }
 }
 
 /// Represents a type of instruction, categorized by mnemonic.
@@ -254,65 +313,6 @@ impl Instruction {
         bytes.push(self.opcode.value);
 
         bytes
-    }
-
-    /// Breaks down an instruction into a sequence of operations
-    /// providing data relevant to their execution.
-    pub fn operations(&self) -> Vec<Operation> {
-        use InstructionType::*;
-        use Operand::*;
-        use OperationType::*;
-
-        macro_rules! single_operation {
-            ($type: expr, $cycles: expr) => {
-                vec![operation!($type, $cycles, self.source, self.destination)]
-            };
-        }
-
-        let operands = (self.source, self.destination);
-
-        match self.r#type {
-            InstructionType::Add => {
-                let cycles = match operands {
-                    (Some(RegisterImplied(_)), Some(RegisterImplied(_))) => 4,
-                    (Some(MemoryIndirect(_)), Some(RegisterImplied(_))) => 7,
-                    (Some(RegisterPairImplied(_)), Some(RegisterPairImplied(_))) => 11,
-                    _ => unimplemented!(),
-                };
-                single_operation!(OperationType::Add, cycles)
-            }
-            Dec => {
-                let cycles = match self.destination {
-                    Some(RegisterImplied(_)) => 4,
-                    Some(RegisterPairImplied(_)) => 6,
-                    _ => unimplemented!(),
-                };
-                single_operation!(Decrement, cycles)
-            }
-            Ex => single_operation!(Exchange, 4),
-            Inc => {
-                let cycles = match self.destination {
-                    Some(RegisterImplied(_)) => 4,
-                    Some(RegisterPairImplied(_)) => 6,
-                    _ => unimplemented!(),
-                };
-                single_operation!(Increment, cycles)
-            }
-            Ld => {
-                let cycles = match operands {
-                    (Some(DoubletImmediate(_)), Some(RegisterPairImplied(_))) => 10,
-                    (Some(RegisterImplied(_)), Some(MemoryIndirect(_)))
-                    | (Some(MemoryIndirect(_)), Some(RegisterImplied(_)))
-                    | (Some(OctetImmediate(_)), Some(RegisterImplied(_))) => 7,
-                    _ => unimplemented!(),
-                };
-                single_operation!(Load, cycles)
-            }
-            Nop => vec![NO_OP],
-            Rlca => single_operation!(RotateLeftThroughCarry, 4),
-            Rrca => single_operation!(RotateRightThroughCarry, 4),
-            _ => unimplemented!(),
-        }
     }
 
     /// Decodes a single instruction (opcode and operands).
@@ -1043,13 +1043,6 @@ mod tests {
             assert_eq!(expected_instruction, actual_instruction);
             assert_eq!(expected_bit, actual_bit);
         }
-    }
-
-    #[test]
-    fn decode_instruction_operation() {
-        let nop_operations = Instruction::default().operations();
-        assert_eq!(1, nop_operations.len());
-        assert_eq!(NO_OP, nop_operations[0]);
     }
 
     #[test]
