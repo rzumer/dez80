@@ -102,9 +102,13 @@ pub enum RegisterType {
 }
 
 /// Represents a single-byte register.
+/// This type is not inherently bound to a `SingleRegisterType`,
+/// so that implementations may lay out their internal storage as desired.
 pub type Register = u8;
 
 /// Represents a pair of single-byte registers.
+/// This type is not inherently bound to a `RegisterPairType`,
+/// so that implementations may lay out their internal storage as desired.
 #[derive(Clone, Copy, Default)]
 pub struct RegisterPair {
     pub high: Register,
@@ -112,7 +116,7 @@ pub struct RegisterPair {
 }
 
 impl RegisterPair {
-    pub fn new(value: u16) -> Self {
+    pub fn from_u16(value: u16) -> Self {
         let mut output = RegisterPair::default();
         output.set_full(value);
 
@@ -122,6 +126,7 @@ impl RegisterPair {
     pub fn full(self) -> u16 {
         u16::from_be_bytes([self.high, self.low])
     }
+
     pub fn set_full(&mut self, value: u16) {
         let bytes = value.to_be_bytes();
         self.high = bytes[0];
@@ -130,8 +135,8 @@ impl RegisterPair {
 }
 
 /// Represents individual Z80 status flags.
-#[repr(u8)]
 #[derive(Clone, Copy, Debug, Display, PartialEq)]
+#[repr(u8)]
 pub enum Flag {
     S = 0b1000_0000,
     Z = 0b0100_0000,
