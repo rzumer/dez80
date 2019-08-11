@@ -5,7 +5,7 @@ A Z80 disassembly library.
 ## Features
 
 * Standard Z80 instruction decoding
-* Implementation-independent data structures to facilitate handling of decoded instructions
+* Implementation-independent data structures
 * Format handlers for displaying instructions and their individual components
 
 ## Use Cases

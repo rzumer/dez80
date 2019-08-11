@@ -101,39 +101,6 @@ pub enum RegisterType {
     RegisterPair(RegisterPairType),
 }
 
-/// Represents a single-byte register.
-/// This type is not inherently bound to a `SingleRegisterType`,
-/// so that implementations may lay out their internal storage as desired.
-pub type Register = u8;
-
-/// Represents a pair of single-byte registers.
-/// This type is not inherently bound to a `RegisterPairType`,
-/// so that implementations may lay out their internal storage as desired.
-#[derive(Clone, Copy, Default)]
-pub struct RegisterPair {
-    pub high: Register,
-    pub low: Register,
-}
-
-impl RegisterPair {
-    pub fn from_u16(value: u16) -> Self {
-        let mut output = RegisterPair::default();
-        output.set_full(value);
-
-        output
-    }
-
-    pub fn full(self) -> u16 {
-        u16::from_be_bytes([self.high, self.low])
-    }
-
-    pub fn set_full(&mut self, value: u16) {
-        let bytes = value.to_be_bytes();
-        self.high = bytes[0];
-        self.low = bytes[1];
-    }
-}
-
 /// Represents individual Z80 status flags.
 #[derive(Clone, Copy, Debug, Display, PartialEq)]
 #[repr(u8)]
@@ -158,43 +125,4 @@ impl Flag {
     pub const OVERFLOW: Self = Flag::PV;
     pub const SUBTRACT: Self = Flag::N;
     pub const CARRY: Self = Flag::C;
-}
-
-/// Represents a set of Z80 status flags as stored in a register.
-/// The backing data is a `Register` stored as a reference.
-pub struct FlagSet<'a> {
-    pub full: &'a Register,
-}
-
-impl<'a> FlagSet<'a> {
-    pub fn flag(&self, flag: Flag) -> bool {
-        *self.full & (flag as u8) > 0
-    }
-}
-
-impl<'a> From<&'a u8> for FlagSet<'a> {
-    fn from(value: &'a u8) -> Self {
-        FlagSet { full: value }
-    }
-}
-
-/// A mutable variant of `FlagSet`.
-pub struct FlagSetMut<'a> {
-    pub full: &'a mut Register,
-}
-
-impl<'a> FlagSetMut<'a> {
-    pub fn flag(&self, flag: Flag) -> bool {
-        *self.full & (flag as u8) > 0
-    }
-
-    pub fn set_flag(&mut self, flag: Flag, on: bool) {
-        *self.full = if on { *self.full | flag as u8 } else { *self.full & !(flag as u8) }
-    }
-}
-
-impl<'a> From<&'a mut u8> for FlagSetMut<'a> {
-    fn from(value: &'a mut u8) -> Self {
-        FlagSetMut { full: value }
-    }
 }
