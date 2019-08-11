@@ -19,54 +19,54 @@ macro_rules! impl_display_register {
 /// independent of its representation in a `RegisterSet`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SingleRegisterType {
-    A,
-    F,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-    IXH,
-    IXL,
-    IYH,
-    IYL,
-    PCH,
-    PCL,
-    SPH,
-    SPL,
-    I,
-    R,
-    W,
-    Z,
-    A_,
-    F_,
-    B_,
-    C_,
-    D_,
-    E_,
-    H_,
-    L_,
+    A,   // Accumulator register
+    F,   // Flag register
+    B,   // B general purpose register
+    C,   // C general purpose register
+    D,   // D general purpose register
+    E,   // E general purpose register
+    H,   // H general purpose register
+    L,   // L general purpose register
+    IXH, // IX index register, high byte
+    IXL, // IX index register, low byte
+    IYH, // IY index register, high byte
+    IYL, // IY index register, low byte
+    PCH, // Program counter, high byte
+    PCL, // Program counter, low byte
+    SPH, // Stack pointer, high byte
+    SPL, // Stack pointer, low byte
+    I,   // Interrupt vector register
+    R,   // Memory refresh register
+    W,   // Temporary storage register, high byte
+    Z,   // Temporary storage register, low byte
+    A_,  // Alternate accumulator register
+    F_,  // Alternate flag register
+    B_,  // Alternate B general purpose register
+    C_,  // Alternate C general purpose register
+    D_,  // Alternate D general purpose register
+    E_,  // Alternate E general purpose register
+    H_,  // Alternate H general purpose register
+    L_,  // Alternate L general purpose register
 }
 
 /// Used to identify a register pair in a manner
 /// independent of its representation in a `RegisterSet`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RegisterPairType {
-    AF,
-    BC,
-    DE,
-    HL,
-    IX,
-    IY,
-    PC,
-    SP,
-    IR,
-    WZ,
-    AF_,
-    BC_,
-    DE_,
-    HL_,
+    AF,  // Accumulator and flag registers
+    BC,  // B and C general purpose registers
+    DE,  // D and E general purpose registers
+    HL,  // H and L general purpose registers
+    IX,  // IX index register
+    IY,  // IY index register
+    PC,  // Program counter
+    SP,  // Stack pointer
+    IR,  // Interrupt vector and memory refresh registers
+    WZ,  // Temporary storage register
+    AF_, // Alternate accumulator and flag registers
+    BC_, // Alternate B and C general purpose registers
+    DE_, // Alternate D and E general purpose registers
+    HL_, // Alternate H and L general purpose registers
 }
 
 impl RegisterPairType {
