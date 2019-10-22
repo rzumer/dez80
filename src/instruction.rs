@@ -1087,8 +1087,8 @@ mod tests {
         for opcode in 0x00_u8..=0xFF_u8 {
             let instruction = Instruction::decode(&mut [opcode].bytes().peekable());
 
-            if instruction.is_some() {
-                assert_eq!(vec![opcode], instruction.unwrap().to_bytes());
+            if let Some(decoded) = instruction {
+                assert_eq!(vec![opcode], decoded.to_bytes());
             }
         }
 
