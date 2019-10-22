@@ -317,7 +317,7 @@ impl Instruction {
 
     /// Decodes a single instruction (opcode and operands).
     #[allow(clippy::cognitive_complexity)]
-    fn decode<R: Read>(bytes: &mut Peekable<Bytes<R>>) -> Option<Self> {
+    pub fn decode<R: Read>(bytes: &mut Peekable<Bytes<R>>) -> Option<Self> {
         /// Flattens the next byte in the stream to an `Option<u8>` value.
         /// Any read error (due to having reached the end of the stream or otherwise) returns `None`.
         fn next_byte<R: Read>(bytes: &mut Peekable<Bytes<R>>) -> Option<u8> {
