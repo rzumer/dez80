@@ -253,8 +253,8 @@ impl fmt::Display for OpcodePrefix {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Opcode {
-    prefix: Option<OpcodePrefix>,
-    value: u8,
+    pub prefix: Option<OpcodePrefix>,
+    pub value: u8,
 }
 
 impl fmt::Display for Opcode {
@@ -271,10 +271,10 @@ impl fmt::Display for Opcode {
 /// Represents a single Z80 instruction with machine cycle granularity.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Instruction {
-    opcode: Opcode,
-    r#type: InstructionType,
-    source: Option<Operand>,
-    destination: Option<Operand>,
+    pub opcode: Opcode,
+    pub r#type: InstructionType,
+    pub source: Option<Operand>,
+    pub destination: Option<Operand>,
 }
 
 impl Instruction {
