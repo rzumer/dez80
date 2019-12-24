@@ -15,6 +15,17 @@ macro_rules! impl_display_register {
     );
 }
 
+/// Represents the order of a given register in a pair.
+/// For example, `RegisterPairType::AF` includes the
+/// registers `SingleRegisterType::A` and
+/// `SingleRegisterType::F`, which are high and low
+/// within the pair respectively.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RegisterOrder {
+    High,
+    Low,
+}
+
 /// Used to identify a single register in a manner
 /// independent of its representation in a `RegisterSet`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -47,6 +58,45 @@ pub enum SingleRegisterType {
     E_,  // Alternate E general purpose register
     H_,  // Alternate H general purpose register
     L_,  // Alternate L general purpose register
+}
+
+impl SingleRegisterType {
+    pub fn to_register_pair_type(self) -> (RegisterPairType, RegisterOrder) {
+        use RegisterOrder::*;
+        use RegisterPairType::*;
+        use SingleRegisterType::*;
+
+        match self {
+            A => (AF, High),
+            F => (AF, Low),
+            B => (BC, High),
+            C => (BC, Low),
+            D => (DE, High),
+            E => (DE, Low),
+            H => (HL, High),
+            L => (HL, Low),
+            IXH => (IX, High),
+            IXL => (IX, Low),
+            IYH => (IY, High),
+            IYL => (IY, Low),
+            PCH => (PC, High),
+            PCL => (PC, Low),
+            SPH => (SP, High),
+            SPL => (SP, Low),
+            I => (IR, High),
+            R => (IR, Low),
+            W => (WZ, High),
+            Z => (WZ, Low),
+            A_ => (AF_, High),
+            F_ => (AF_, Low),
+            B_ => (BC_, High),
+            C_ => (BC_, Low),
+            D_ => (DE_, High),
+            E_ => (DE_, Low),
+            H_ => (HL_, High),
+            L_ => (HL_, Low),
+        }
+    }
 }
 
 /// Used to identify a register pair in a manner
