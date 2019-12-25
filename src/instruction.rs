@@ -45,8 +45,10 @@ macro_rules! instruction {
 pub enum Condition {
     FlagSet(Flag),
     FlagNotSet(Flag),
-    RegisterZero(SingleRegisterType),
-    RegisterPairZero(RegisterPairType),
+    RegisterValue(SingleRegisterType, u8),
+    RegisterNotValue(SingleRegisterType, u8),
+    RegisterPairValue(RegisterPairType, u16),
+    RegisterPairNotValue(RegisterPairType, u16),
 }
 
 /// Represents a target for data operations.
