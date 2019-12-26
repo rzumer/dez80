@@ -61,13 +61,13 @@ pub enum Operand {
     RegisterPairImplied(RegisterPairType),
     RegisterBitImplied(SingleRegisterType, u8),
     MemoryDirect(u16),
-    MemoryRelative(i8),
     MemoryIndirect(RegisterPairType),
     MemoryIndexed(RegisterPairType, i8),
     MemoryIndexedAndRegister(RegisterPairType, i8, SingleRegisterType),
     MemoryIndirectBit(RegisterPairType, u8),
     MemoryIndexedBit(RegisterPairType, i8, u8),
     MemoryIndexedBitAndRegister(RegisterPairType, i8, u8, SingleRegisterType),
+    ProgramCounterRelative(i8),
     PortDirect(u8),
     PortIndirect(SingleRegisterType),
 }
@@ -84,7 +84,6 @@ impl fmt::Display for Operand {
             RegisterPairImplied(reg) => write!(f, "{}", reg),
             RegisterBitImplied(reg, bit) => write!(f, "{}, {}", bit, reg),
             MemoryDirect(val) => write!(f, "(0x{:04x})", val.to_le()),
-            MemoryRelative(val) => write!(f, "0x{:02x}", *val as u8),
             MemoryIndirect(reg) => write!(f, "({})", reg),
             MemoryIndexed(reg, idx) => write!(f, "({} + 0x{:02x})", reg, *idx as u8),
             MemoryIndexedAndRegister(reg_in, idx, reg_out) => {
@@ -97,6 +96,7 @@ impl fmt::Display for Operand {
             MemoryIndexedBitAndRegister(reg_in, idx, bit, reg_out) => {
                 write!(f, "{}, ({} + 0x{:02x}), {}", bit, reg_in, *idx as u8, reg_out)
             }
+            ProgramCounterRelative(val) => write!(f, "0x{:02x}", *val as u8),
             PortDirect(val) => write!(f, "(0x{:02x})", val),
             PortIndirect(reg) => write!(f, "({})", reg),
         }
@@ -292,11 +292,11 @@ impl Instruction {
 
         match self.destination {
             Some(MemoryDirect(addr)) => bytes.extend(&addr.to_le_bytes()),
-            Some(MemoryRelative(offset)) => bytes.push(offset as u8),
             Some(MemoryIndexed(_, idx))
             | Some(MemoryIndexedBit(_, idx, _))
             | Some(MemoryIndexedAndRegister(_, idx, _))
             | Some(MemoryIndexedBitAndRegister(_, idx, _, _)) => bytes.push(idx as u8),
+            Some(ProgramCounterRelative(offset)) => bytes.push(offset as u8),
             _ => (),
         };
 
@@ -304,11 +304,11 @@ impl Instruction {
             Some(OctetImmediate(val)) => bytes.push(val),
             Some(DoubletImmediate(val)) => bytes.extend(&val.to_le_bytes()),
             Some(MemoryDirect(addr)) => bytes.extend(&addr.to_le_bytes()),
-            Some(MemoryRelative(offset)) => bytes.push(offset as u8),
             Some(MemoryIndexed(_, idx))
             | Some(MemoryIndexedBit(_, idx, _))
             | Some(MemoryIndexedAndRegister(_, idx, _))
             | Some(MemoryIndexedBitAndRegister(_, idx, _, _)) => bytes.push(idx as u8),
+            Some(ProgramCounterRelative(offset)) => bytes.push(offset as u8),
             _ => (),
         };
 
@@ -699,7 +699,7 @@ impl Instruction {
             0x15 => root!(Dec, destination: RegisterImplied(D)),
             0x16 => root!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(D)),
             0x17 => root!(Rla),
-            0x18 => root!(Jr(None), source: MemoryRelative(next_byte(bytes)? as i8)),
+            0x18 => root!(Jr(None), source: ProgramCounterRelative(next_byte(bytes)? as i8)),
             0x19 => root!(Add, RegisterPairImplied(DE), RegisterPairImplied(HL)),
             0x1A => root!(Ld, MemoryIndirect(DE), RegisterImplied(A)),
             0x1B => root!(Dec, destination: RegisterPairImplied(DE)),
@@ -707,7 +707,7 @@ impl Instruction {
             0x1D => root!(Dec, destination: RegisterImplied(E)),
             0x1E => root!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(E)),
             0x1F => root!(Rra),
-            0x20 => root!(Jr(Some(FlagNotSet(Flag::Z))), source: MemoryRelative(next_byte(bytes)? as i8)),
+            0x20 => root!(Jr(Some(FlagNotSet(Flag::Z))), source: ProgramCounterRelative(next_byte(bytes)? as i8)),
             0x21 => root!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(HL)),
             0x22 => root!(Ld, RegisterPairImplied(HL), MemoryDirect(next_doublet(bytes)?)),
             0x23 => root!(Inc, destination: RegisterPairImplied(HL)),
@@ -715,7 +715,7 @@ impl Instruction {
             0x25 => root!(Dec, destination: RegisterImplied(H)),
             0x26 => root!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(H)),
             0x27 => root!(Daa),
-            0x28 => root!(Jr(Some(FlagSet(Flag::Z))), source: MemoryRelative(next_byte(bytes)? as i8)),
+            0x28 => root!(Jr(Some(FlagSet(Flag::Z))), source: ProgramCounterRelative(next_byte(bytes)? as i8)),
             0x29 => root!(Add, RegisterPairImplied(HL), RegisterPairImplied(HL)),
             0x2A => root!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterPairImplied(HL)),
             0x2B => root!(Dec, destination: RegisterPairImplied(HL)),
@@ -723,7 +723,7 @@ impl Instruction {
             0x2D => root!(Dec, destination: RegisterImplied(L)),
             0x2E => root!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(L)),
             0x2F => root!(Cpl),
-            0x30 => root!(Jr(Some(FlagNotSet(Flag::C))), source: MemoryRelative(next_byte(bytes)? as i8)),
+            0x30 => root!(Jr(Some(FlagNotSet(Flag::C))), source: ProgramCounterRelative(next_byte(bytes)? as i8)),
             0x31 => root!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(SP)),
             0x32 => root!(Ld, RegisterImplied(A), MemoryDirect(next_doublet(bytes)?)),
             0x33 => root!(Inc, destination: RegisterPairImplied(SP)),
@@ -731,7 +731,7 @@ impl Instruction {
             0x35 => root!(Dec, destination: MemoryIndirect(HL)),
             0x36 => root!(Ld, OctetImmediate(next_byte(bytes)?), MemoryIndirect(HL)),
             0x37 => root!(Scf),
-            0x38 => root!(Jr(Some(FlagSet(Flag::C))), source: MemoryRelative(next_byte(bytes)? as i8)),
+            0x38 => root!(Jr(Some(FlagSet(Flag::C))), source: ProgramCounterRelative(next_byte(bytes)? as i8)),
             0x39 => root!(Add, RegisterPairImplied(SP), RegisterPairImplied(HL)),
             0x3A => root!(Ld, MemoryDirect(next_doublet(bytes)?), RegisterImplied(A)),
             0x3B => root!(Dec, destination: RegisterPairImplied(SP)),
