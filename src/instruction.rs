@@ -691,7 +691,7 @@ impl Instruction {
             0x0D => root!(Dec, destination: RegisterImplied(C)),
             0x0E => root!(Ld, OctetImmediate(next_byte(bytes)?), RegisterImplied(C)),
             0x0F => root!(Rrca),
-            0x10 => root!(Djnz, source: OctetImmediate(next_byte(bytes)?)),
+            0x10 => root!(Djnz, source: ProgramCounterRelative(next_byte(bytes)? as i8)),
             0x11 => root!(Ld, DoubletImmediate(next_doublet(bytes)?), RegisterPairImplied(DE)),
             0x12 => root!(Ld, RegisterImplied(A), MemoryIndirect(DE)),
             0x13 => root!(Inc, destination: RegisterPairImplied(DE)),
