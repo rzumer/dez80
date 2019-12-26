@@ -659,7 +659,7 @@ impl Instruction {
                 // 0xE4
                 0xE5 => indexed!(Push, source: RegisterPairImplied(idx)),
                 // 0xE6 ~ 0xE8
-                0xE9 => indexed!(Jp(None), source: MemoryIndirect(idx)),
+                0xE9 => indexed!(Jp(None), source: RegisterPairImplied(idx)),
                 // 0xEA ~ 0xF8
                 0xF9 => indexed!(Ld, RegisterPairImplied(idx), RegisterPairImplied(SP)),
                 // 0xFA ~ 0xFF
@@ -908,7 +908,7 @@ impl Instruction {
             0xE6 => root!(And, source: OctetImmediate(next_byte(bytes)?)),
             0xE7 => root!(Rst(0x20)),
             0xE8 => root!(Ret(Some(FlagNotSet(Flag::PV)))),
-            0xE9 => root!(Jp(None), source: MemoryIndirect(HL)),
+            0xE9 => root!(Jp(None), source: RegisterPairImplied(HL)),
             0xEA => root!(Jp(Some(FlagNotSet(Flag::PV))), source: DoubletImmediate(next_doublet(bytes)?)),
             0xEB => root!(Ex, RegisterPairImplied(HL), RegisterPairImplied(DE)),
             0xEC => root!(Call(Some(FlagNotSet(Flag::PV))), source: DoubletImmediate(next_doublet(bytes)?)),
@@ -972,9 +972,18 @@ impl fmt::Display for Instruction {
                 (Some(operand), None) | (None, Some(operand)) => match self.r#type {
                     // Conditional instructions are written with a separator
                     // between the condition and the operand.
-                    Call(Some(_)) | Jp(Some(_)) | Jr(Some(_)) | Ret(Some(_)) => {
-                        write!(f, "{}, {}", self.r#type, operand)
-                    }
+                    Call(Some(_)) | Jp(Some(_)) | Jr(Some(_)) | Ret(Some(_)) => match operand {
+                        Operand::RegisterPairImplied(_) => {
+                            write!(f, "{}, ({})", self.r#type, operand)
+                        }
+                        _ => write!(f, "{}, {}", self.r#type, operand),
+                    },
+                    Jp(None) | Jr(None) => match operand {
+                        Operand::RegisterPairImplied(_) => {
+                            write!(f, "{} ({})", self.r#type, operand)
+                        }
+                        _ => write!(f, "{} {}", self.r#type, operand),
+                    },
                     _ => write!(f, "{} {}", self.r#type, operand),
                 },
                 (None, None) => write!(f, "{}", self.r#type),
