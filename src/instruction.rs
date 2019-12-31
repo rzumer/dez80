@@ -59,7 +59,7 @@ pub enum Operand {
     DoubletImmediate(u16),
     RegisterImplied(SingleRegisterType),
     RegisterPairImplied(RegisterPairType),
-    RegisterBitImplied(SingleRegisterType, u8),
+    RegisterImpliedBit(SingleRegisterType, u8),
     MemoryDirect(u16),
     MemoryIndirect(RegisterPairType),
     MemoryIndexed(RegisterPairType, i8),
@@ -82,7 +82,7 @@ impl fmt::Display for Operand {
             DoubletImmediate(val) => write!(f, "0x{:04x}", val),
             RegisterImplied(reg) => write!(f, "{}", reg),
             RegisterPairImplied(reg) => write!(f, "{}", reg),
-            RegisterBitImplied(reg, bit) => write!(f, "{}, {}", bit, reg),
+            RegisterImpliedBit(reg, bit) => write!(f, "{}, {}", bit, reg),
             MemoryDirect(val) => write!(f, "(0x{:04x})", val.to_le()),
             MemoryIndirect(reg) => write!(f, "({})", reg),
             MemoryIndexed(reg, idx) => write!(f, "({} + 0x{:02x})", reg, *idx as u8),
@@ -509,7 +509,7 @@ impl Instruction {
                 let bit = opcode >> 3 & 0x07;
                 match index_register {
                     None => match operand_register {
-                        Some(reg) => RegisterBitImplied(reg, bit),
+                        Some(reg) => RegisterImpliedBit(reg, bit),
                         None => MemoryIndirectBit(HL, bit),
                     },
                     Some(idx) => match operand_register {
@@ -1047,7 +1047,7 @@ mod tests {
 
             let expected_bit = (opcode - offset) / 8;
             let actual_bit = match bit_instruction.destination.unwrap() {
-                Operand::RegisterBitImplied(_, val) | Operand::MemoryIndirectBit(_, val) => val,
+                Operand::RegisterImpliedBit(_, val) | Operand::MemoryIndirectBit(_, val) => val,
                 _ => panic!("Unexpected decoded operand"),
             };
 
