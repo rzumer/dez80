@@ -616,7 +616,9 @@ impl Instruction {
                 0x75 => indexed!(Ld, RegisterImplied(L), MemoryIndexed(idx, next_byte(bytes)? as i8)),
                 // 0x76
                 0x77 => indexed!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_byte(bytes)? as i8)),
-                // 0x78 ~ 0x7D
+                // 0x78 ~ 0x7B
+                0x7C => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(A)),
+                0x7D => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(A)),
                 0x7E => indexed!(Ld, MemoryIndexed(idx, next_byte(bytes)? as i8), RegisterImplied(A)),
                 // 0x7F ~ 0x83
                 0x84 => indexed!(Add, RegisterImplied(idx_h), RegisterImplied(A)),
