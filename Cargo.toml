@@ -1,6 +1,6 @@
 [package]
 name = "dez80"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Z80 disassembly library."
 repository = "https://github.com/rzumer/rz80"
 authors = ["Raphaël Zumer <rzumer@tebako.net>"]
