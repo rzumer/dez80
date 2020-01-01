@@ -133,7 +133,7 @@ pub enum InstructionType {
     Indr,
     Ini,
     Inir,
-    Inva, // Unofficial mnemonic, invalid instruction with no observable side effect; equivalent to NONI followed by NOP
+    Inva, // Unofficial mnemonic, invalid instruction with no observable side effect
     Jp(Option<Condition>),
     Jr(Option<Condition>),
     Ld,
@@ -142,7 +142,6 @@ pub enum InstructionType {
     Ldi,
     Ldir,
     Neg,
-    Noni, // Unofficial mnemonic, equivalent to NOP but blocks interrupts until the next decode cycle
     Nop,
     Or,
     Otdr,
@@ -539,16 +538,11 @@ impl Instruction {
                 IY => (IYH, IYL),
                 _ => unreachable!(),
             };
-            let opcode = peek_byte(bytes)?;
+            let opcode = next_byte(bytes)?;
 
             macro_rules! indexed {
                 ($($args: tt)+) => { instruction!(Opcode { prefix: Some(Indexed(idx)), value: opcode }, $($args)+) }
             }
-
-            match opcode {
-                0xDD | 0xFD => return Some(indexed!(Noni)), // when decoding a double prefix, save the second one
-                _ => bytes.next(), // otherwise, advance the reader to the next byte
-            };
 
             match opcode {
                 // 0x00 ~ 0x08
@@ -665,7 +659,7 @@ impl Instruction {
                 // 0xEA ~ 0xF8
                 0xF9 => indexed!(Ld, RegisterPairImplied(idx), RegisterPairImplied(SP)),
                 // 0xFA ~ 0xFF
-                _ => indexed!(Inva),
+                _ => return Instruction::decode(bytes),
             }.into()
         }
 
@@ -962,7 +956,7 @@ impl fmt::Display for Instruction {
         use OpcodePrefix::*;
 
         match self.r#type {
-            Noni | Inva => write!(f, "{}", self.opcode),
+            Inva => write!(f, "{}", self.opcode),
             _ => match (self.source, self.destination) {
                 (Some(src), Some(dst)) => match self.opcode {
                     // 0xED71 is a special case, and some assemblers do not support hexadecimal representation for it.
