@@ -61,6 +61,7 @@ pub enum SingleRegisterType {
 }
 
 impl SingleRegisterType {
+    #[inline(always)]
     pub fn to_register_pair_type(self) -> (RegisterPairType, RegisterOrder) {
         use RegisterOrder::*;
         use RegisterPairType::*;
@@ -120,6 +121,7 @@ pub enum RegisterPairType {
 }
 
 impl RegisterPairType {
+    #[inline(always)]
     pub fn to_single_register_types(self) -> (SingleRegisterType, SingleRegisterType) {
         use RegisterPairType::*;
         use SingleRegisterType::*;
