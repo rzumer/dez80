@@ -26,8 +26,8 @@ pub enum RegisterOrder {
     Low,
 }
 
-/// Used to identify a single register in a manner
-/// independent of its representation in a `RegisterSet`.
+/// Used to identify a single register in an
+/// implementation-independent manner.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SingleRegisterType {
     A,   // Accumulator register
@@ -99,8 +99,8 @@ impl SingleRegisterType {
     }
 }
 
-/// Used to identify a register pair in a manner
-/// independent of its representation in a `RegisterSet`.
+/// Used to identify a register pair in an
+/// implementation-independent manner.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RegisterPairType {
     AF,  // Accumulator and flag registers
