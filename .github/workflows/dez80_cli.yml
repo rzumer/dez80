@@ -16,3 +16,11 @@ jobs:
     - name: Build
       working-directory: ${{github.workspace}}/bin
       run: cargo build --verbose
+    - name: Run rustfmt
+      run: |
+        rustup component add rustfmt \
+        && cargo fmt -- --check
+    - name: Run Clippy
+      run: |
+        rustup component add clippy \
+        && cargo clippy
