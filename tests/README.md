@@ -1,6 +1,6 @@
 ## Integration tests
 
-The binary stream used in the DeZ80 integration tests were assembled using
+The binary stream used in the DeZ80 integration tests was pre-assembled using
 [z80asm](https://www.nongnu.org/z80asm/). This ensures that the binary input
 and the expected disassembly output correspond to one another.
 
