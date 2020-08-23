@@ -986,8 +986,8 @@ impl fmt::Display for Instruction {
                 let prefix = self.opcode.prefix.unwrap();
                 match prefix {
                     // Invalid indexed instruction opcode values are redundant, so do not display them.
-                    Indexed(_) => write!(f, "{:X?}", prefix.to_bytes()[0]),
-                    _ => write!(f, "{}", self.opcode),
+                    Indexed(_) => write!(f, ";{}", prefix), // commented out
+                    _ => write!(f, ";{}", self.opcode),     // commented out
                 }
             }
             _ => match (self.source, self.destination) {
@@ -1118,13 +1118,13 @@ mod tests {
     #[test]
     fn format_invalid_extended_instruction() {
         let invalid = Instruction::decode(&mut [0xED, 0x04].bytes().peekable()).unwrap();
-        assert_eq!("ED 04", format!("{}", invalid));
+        assert_eq!(";ED 04", format!("{}", invalid));
     }
 
     #[test]
     fn format_invalid_indexed_instruction() {
         let invalid = Instruction::decode(&mut [0xDD, 0xFD].bytes().peekable()).unwrap();
-        assert_eq!("DD", format!("{}", invalid));
+        assert_eq!(";DD", format!("{}", invalid));
     }
 
     #[test]
