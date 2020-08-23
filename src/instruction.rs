@@ -24,19 +24,49 @@ use strum_macros::IntoStaticStr;
 
 macro_rules! instruction {
     ($opcode: expr, $type: expr) => {
-        Instruction { opcode: $opcode, r#type: $type, source: None, destination: None }
+        Instruction {
+            ignored_prefixes: vec![],
+            opcode: $opcode,
+            r#type: $type,
+            source: None,
+            destination: None,
+        }
     };
     ($opcode: expr, $type: expr, source: $src: expr) => {
-        Instruction { opcode: $opcode, r#type: $type, source: Some($src), destination: None }
+        Instruction {
+            ignored_prefixes: vec![],
+            opcode: $opcode,
+            r#type: $type,
+            source: Some($src),
+            destination: None,
+        }
     };
     ($opcode: expr, $type: expr, destination: $dst: expr) => {
-        Instruction { opcode: $opcode, r#type: $type, source: None, destination: Some($dst) }
+        Instruction {
+            ignored_prefixes: vec![],
+            opcode: $opcode,
+            r#type: $type,
+            source: None,
+            destination: Some($dst),
+        }
     };
     ($opcode: expr, $type: expr, destination: $dst: expr, source: $src: expr) => {
-        Instruction { opcode: $opcode, r#type: $type, destination: Some($dst), source: Some($src) }
+        Instruction {
+            ignored_prefixes: vec![],
+            opcode: $opcode,
+            r#type: $type,
+            destination: Some($dst),
+            source: Some($src),
+        }
     };
     ($opcode: expr, $type: expr, $src: expr, $dst: expr) => {
-        Instruction { opcode: $opcode, r#type: $type, source: Some($src), destination: Some($dst) }
+        Instruction {
+            ignored_prefixes: vec![],
+            opcode: $opcode,
+            r#type: $type,
+            source: Some($src),
+            destination: Some($dst),
+        }
     };
 }
 
@@ -74,7 +104,7 @@ pub enum Operand {
 
 impl fmt::Display for Operand {
     /// Formats operands based on standard notation.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Operand::*;
 
         match self {
@@ -179,7 +209,7 @@ pub enum InstructionType {
 
 impl fmt::Display for InstructionType {
     /// Formats instruction types as their canonical mnemonics.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use InstructionType::*;
 
         // Write the instruction mnemonic
@@ -211,6 +241,7 @@ impl fmt::Display for InstructionType {
     }
 }
 
+/// Represents a set of one or two bytes modifying an instruction's opcode.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum OpcodePrefix {
@@ -239,7 +270,7 @@ impl OpcodePrefix {
 
 impl fmt::Display for OpcodePrefix {
     /// Formats the prefix as its raw byte values.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let bytes = self.to_bytes();
 
         write!(f, "{:02X}", bytes[0])?;
@@ -252,6 +283,7 @@ impl fmt::Display for OpcodePrefix {
     }
 }
 
+/// Represents an instruction opcode, including prefixes but excluding operands.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Opcode {
     pub prefix: Option<OpcodePrefix>,
@@ -260,7 +292,7 @@ pub struct Opcode {
 
 impl fmt::Display for Opcode {
     /// Formats the opcode as a sequence of raw hexadecimal values.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(prefix) = self.prefix {
             write!(f, "{} {:02X}", prefix, self.value)
         } else {
@@ -270,11 +302,20 @@ impl fmt::Display for Opcode {
 }
 
 /// Represents a single Z80 instruction with machine cycle granularity.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Instruction {
+    /// Collection of 0xDD and 0xFD opcodes (indexed instruction prefixes) that
+    /// are ignored during the decoding process, due to the opcodes they precede
+    /// not mapping to an actual indexed instruction. These ignored prefixes
+    /// incur a runtime cost, but have no other effect on the decoded instruction.
+    pub ignored_prefixes: Vec<OpcodePrefix>,
+    /// The actual opcode decoded for this instruction, including any prefix.
     pub opcode: Opcode,
+    /// The instruction type for this instruction, which maps to a mnemonic.
     pub r#type: InstructionType,
+    /// The source operand for this instruction if any, indicating where data is read.
     pub source: Option<Operand>,
+    /// The destination operand for this instruction if any, indicating where data is written.
     pub destination: Option<Operand>,
 }
 
@@ -550,11 +591,6 @@ impl Instruction {
                 // In the case of an invalid instruction, the reader should not advance
                 // and the next decoding step will begin with the second opcode in the
                 // sequence. Otherwise, the reader must advance to read operands correctly.
-                //
-                // Note: in a stream of decoded instructions, the `Opcode.value` of an
-                // indexed invalid instruction is redundant, as it will be identical to
-                // the first opcode (or prefix) of the following instruction (assuming the
-                // stream does not end with an invalid instruction).
                 0x00..=0x08 | 0x0A..=0x18 | 0x1A..=0x20 |
                 0x27..=0x28 | 0x2F..=0x33 | 0x37..=0x38 |
                 0x3A..=0x43 | 0x47..=0x4B | 0x4F..=0x53 |
@@ -563,7 +599,19 @@ impl Instruction {
                 0x97..=0x9B | 0x9F..=0xA3 | 0xA7..=0xAB |
                 0xAF..=0xB3 | 0xB7..=0xBB | 0xBF..=0xCA |
                 0xCC..=0xE0 | 0xE2 | 0xE4 | 0xE6..=0xE8 |
-                0xEA..=0xF8 | 0xFA..=0xFF => indexed!(Inva),
+                0xEA..=0xF8 | 0xFA..=0xFF => {
+                    // Decode up to the final instruction recursively.
+                    // This ensures that even if the opcode stream has multiple
+                    // redundant indexed instruction opcodes, the instruction
+                    // returned to the user will be the result of a full single
+                    // decode-fetch-execute cycle.
+                    let mut final_instruction = Instruction::decode(bytes)?;
+                    final_instruction.ignored_prefixes.push(Indexed(idx));
+                    // Ensure that the prefixes are in order.
+                    final_instruction.ignored_prefixes.reverse();
+
+                    final_instruction
+                },
                 _ => {
                     bytes.next();
 
@@ -976,47 +1024,63 @@ impl Default for Instruction {
 
 /// Formats instructions by disassembling their raw byte representation.
 impl fmt::Display for Instruction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use InstructionType::*;
         use OpcodePrefix::*;
 
         match self.r#type {
-            Inva => {
-                // Invalid instructions are always prefixed.
-                let prefix = self.opcode.prefix.unwrap();
-                match prefix {
-                    // Invalid indexed instruction opcode values are redundant, so do not display them.
-                    Indexed(_) => write!(f, ";{}", prefix), // commented out
-                    _ => write!(f, ";{}", self.opcode),     // commented out
-                }
-            }
-            _ => match (self.source, self.destination) {
-                (Some(src), Some(dst)) => match self.opcode {
-                    // 0xED71 is a special case, and some assemblers do not support hexadecimal representation for it.
-                    Opcode { prefix: Some(Extended), value: 0x71 } => {
-                        write!(f, "{} {}, 0", self.r#type, dst)
-                    }
-                    _ => write!(f, "{} {}, {}", self.r#type, dst, src),
-                },
-                (Some(operand), None) | (None, Some(operand)) => match self.r#type {
-                    // Conditional instructions are written with a separator
-                    // between the condition and the operand.
-                    Call(Some(_)) | Jp(Some(_)) | Jr(Some(_)) | Ret(Some(_)) => match operand {
-                        Operand::RegisterPairImplied(_) => {
-                            write!(f, "{}, ({})", self.r#type, operand)
+            // Invalid instructions are commented out to make reassembly easier.
+            // Any invalid prefix is folded into the printed opcodes in order.
+            Inva => write!(
+                f,
+                ";{}{}",
+                self.ignored_prefixes
+                    .iter()
+                    .fold(String::new(), |string, &prefix| string + &prefix.to_string() + " "),
+                self.opcode
+            ),
+            _ => {
+                match (self.source, self.destination) {
+                    (Some(src), Some(dst)) => match self.opcode {
+                        // 0xED71 is a special case, and some assemblers do not support hexadecimal representation for it.
+                        Opcode { prefix: Some(Extended), value: 0x71 } => {
+                            write!(f, "{} {}, 0", self.r#type, dst)
                         }
-                        _ => write!(f, "{}, {}", self.r#type, operand),
+                        _ => write!(f, "{} {}, {}", self.r#type, dst, src),
                     },
-                    Jp(None) | Jr(None) => match operand {
-                        Operand::RegisterPairImplied(_) => {
-                            write!(f, "{} ({})", self.r#type, operand)
-                        }
+                    (Some(operand), None) | (None, Some(operand)) => match self.r#type {
+                        // Conditional instructions are written with a separator
+                        // between the condition and the operand.
+                        Call(Some(_)) | Jp(Some(_)) | Jr(Some(_)) | Ret(Some(_)) => match operand {
+                            Operand::RegisterPairImplied(_) => {
+                                write!(f, "{}, ({})", self.r#type, operand)
+                            }
+                            _ => write!(f, "{}, {}", self.r#type, operand),
+                        },
+                        Jp(None) | Jr(None) => match operand {
+                            Operand::RegisterPairImplied(_) => {
+                                write!(f, "{} ({})", self.r#type, operand)
+                            }
+                            _ => write!(f, "{} {}", self.r#type, operand),
+                        },
                         _ => write!(f, "{} {}", self.r#type, operand),
                     },
-                    _ => write!(f, "{} {}", self.r#type, operand),
-                },
-                (None, None) => write!(f, "{}", self.r#type),
-            },
+                    (None, None) => write!(f, "{}", self.r#type),
+                }?;
+
+                // Print any ignored (invalid) prefixes as comments.
+                if !self.ignored_prefixes.is_empty() {
+                    write!(
+                        f,
+                        " ;invalid prefix:{}",
+                        self.ignored_prefixes.iter().fold(String::new(), |string, &prefix| string
+                            + " "
+                            + &prefix.to_string())
+                    )
+                } else {
+                    Ok(())
+                }
+            }
         }
     }
 }
@@ -1123,8 +1187,26 @@ mod tests {
 
     #[test]
     fn format_invalid_indexed_instruction() {
-        let invalid = Instruction::decode(&mut [0xDD, 0xFD].bytes().peekable()).unwrap();
-        assert_eq!(";DD", format!("{}", invalid));
+        use OpcodePrefix::*;
+        use RegisterPairType::*;
+
+        let invalid =
+            Instruction::decode(&mut [0xDD, 0xFD, 0xFD, 0x00].bytes().peekable()).unwrap();
+        assert_eq!(vec![Indexed(IX), Indexed(IY), Indexed(IY)], invalid.ignored_prefixes);
+        assert_eq!(None, invalid.opcode.prefix);
+        assert_eq!("NOP ;invalid prefix: DD FD FD", format!("{}", invalid));
+    }
+
+    #[test]
+    fn format_invalid_indexed_final_instruction() {
+        let invalid = Instruction::decode(&mut [0xDD, 0xFD].bytes().peekable());
+        assert_eq!(None, invalid);
+    }
+
+    #[test]
+    fn format_invalid_extended_instruction_with_ignored_prefix() {
+        let invalid = Instruction::decode(&mut [0xDD, 0xED, 0x04].bytes().peekable()).unwrap();
+        assert_eq!(";DD ED 04", format!("{}", invalid));
     }
 
     #[test]
