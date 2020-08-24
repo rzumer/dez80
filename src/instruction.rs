@@ -1212,8 +1212,9 @@ mod tests {
 
     #[test]
     fn invalid_indexed_instruction_to_bytes() {
-        let invalid = Instruction::decode(&mut [0xDD, 0xFD, 0x00].bytes().peekable()).unwrap();
-        assert_eq!(vec![0xDD, 0xFD, 0x00], invalid.to_bytes());
+        let instruction_sequence_bytes = [0xDD, 0xFD, 0x00];
+        let invalid = Instruction::from_bytes(&mut instruction_sequence_bytes.as_ref());
+        assert_eq!(instruction_sequence_bytes, invalid[0].to_bytes().as_slice());
     }
 
     #[test]
