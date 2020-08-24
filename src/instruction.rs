@@ -324,7 +324,8 @@ impl Instruction {
     pub fn to_bytes(&self) -> Vec<u8> {
         use Operand::*;
 
-        let mut bytes = Vec::with_capacity(4);
+        let mut bytes = Vec::with_capacity(4 + self.ignored_prefixes.len());
+        bytes.extend(self.ignored_prefixes.iter().flat_map(|x| x.to_bytes()));
 
         if let Some(prefix) = self.opcode.prefix {
             bytes.extend(prefix.to_bytes());
@@ -1207,6 +1208,12 @@ mod tests {
     fn format_invalid_extended_instruction_with_ignored_prefix() {
         let invalid = Instruction::decode(&mut [0xDD, 0xED, 0x04].bytes().peekable()).unwrap();
         assert_eq!(";DD ED 04", format!("{}", invalid));
+    }
+
+    #[test]
+    fn invalid_indexed_instruction_to_bytes() {
+        let invalid = Instruction::decode(&mut [0xDD, 0xFD, 0x00].bytes().peekable()).unwrap();
+        assert_eq!(vec![0xDD, 0xFD, 0x00], invalid.to_bytes());
     }
 
     #[test]
