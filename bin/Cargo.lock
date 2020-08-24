@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "dez80"
-version = "0.2.0"
+version = "0.3.2"
 dependencies = [
  "strum 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "strum_macros 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -100,7 +100,7 @@ name = "dez80_cli"
 version = "1.0.1"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dez80 0.2.0",
+ "dez80 0.3.2",
  "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
