@@ -7,27 +7,10 @@ use criterion::{Bencher, Criterion, Fun};
 use dez80::Instruction;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-const INSTRUCTION_STREAM: &[u8] = &[
-    0x00, // NOP
-    0x01, 0x02, 0x03, // LD BC, **
-    0x04, // INC B
-    0x05, // DEC B
-    0x06, 0x07, // LD B, *
-    0x08, // RLCA
-    0x09, // ADD HL, BC
-    0x0A, // LD A, (BC)
-    0xED, 0x5E, // IM 2
-    0xED, 0x61, // OUT (C), H
-    0xCB, 0x00, // RLC B
-    0xCB, 0x46, // BIT 0, (HL)
-    0xFD, 0x39, // ADD IY, SP
-    0xDD, 0x77, 0x11, // LD (IX + 0x11), A
-    0xDD, 0xCB, 0x22, 0x06, // RLC (IX + 0x22)
-    0xFD, 0xCB, 0x33, 0x46, // BIT 0, (IY + 0x33)
-];
+const INSTRUCTION_STREAM: &[u8] = include_bytes!("../tests/allinstructions.bin");
 
-fn bench_instruction_decode_all(c: &mut Criterion) {
-    c.bench_function("Instruction::decode_all", |b| {
+fn bench_instruction_from_bytes(c: &mut Criterion) {
+    c.bench_function("Instruction::from_bytes", |b| {
         b.iter(|| Instruction::from_bytes(&mut INSTRUCTION_STREAM))
     });
 }
@@ -78,7 +61,7 @@ fn bench_instruction_to_string(c: &mut Criterion) {
 
 criterion_group!(
     instruction,
-    bench_instruction_decode_all,
+    bench_instruction_from_bytes,
     bench_instruction_to_bytes,
     bench_instruction_to_string
 );
