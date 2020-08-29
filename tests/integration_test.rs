@@ -8,7 +8,7 @@ fn decode_official_instructions() {
     let mut reader = BufReader::new(input_bytes);
 
     // Decode instructions in the byte stream.
-    let instructions = Instruction::from_bytes(&mut reader);
+    let instructions = Instruction::decode_all(&mut reader);
 
     // Format decoded instructions to their mnemonic representations.
     let formatted = instructions.iter().map(|i| i.to_string()).collect::<Vec<String>>();

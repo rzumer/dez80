@@ -44,7 +44,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut reader = BufReader::new(input_file);
 
     // Decode instructions in the byte stream.
-    let instructions = Instruction::from_bytes(&mut reader);
+    let instructions = Instruction::decode_all(&mut reader);
 
     // Format decoded instructions to their mnemonic representations.
     #[cfg(feature = "rayon")]
