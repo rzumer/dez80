@@ -1,6 +1,6 @@
 [package]
 name = "dez80_cli"
-version = "1.0.1"
+version = "1.0.2"
 description = "A Z80 disassembler interface based on the DeZ80 library."
 repository = "https://github.com/rzumer/rz80"
 authors = ["Raphaël Zumer <rzumer@tebako.net>"]
@@ -13,4 +13,4 @@ default = ["rayon"]
 [dependencies]
 clap = "2.33"
 rayon = { version = "1.1", optional = true }
-dez80 = { version = "0.3", path = "../" }
+dez80 = { path = "../" }
