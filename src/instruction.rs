@@ -1,5 +1,5 @@
-//! Contains models and functions associated with Z80 instructions,
-//! including decoding, formatting and decomposition into operations.
+//! Contains models and functions to define, decode,
+//! and format Z80 instructions and their components.
 //!
 //! # Examples
 //!
@@ -301,7 +301,7 @@ impl fmt::Display for Opcode {
     }
 }
 
-/// Represents a single Z80 instruction with machine cycle granularity.
+/// Represents a single Z80 instruction.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Instruction {
     /// Collection of 0xDD and 0xFD opcodes (indexed instruction prefixes) that
@@ -605,7 +605,7 @@ impl Instruction {
                     // This ensures that even if the opcode stream has multiple
                     // redundant indexed instruction opcodes, the instruction
                     // returned to the user will be the result of a full single
-                    // decode-fetch-execute cycle.
+                    // decode-fetch cycle.
                     let mut final_instruction = Instruction::decode_one_inner(bytes)?;
                     final_instruction.ignored_prefixes.push(Indexed(idx));
                     // Ensure that the prefixes are in order.
