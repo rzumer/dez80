@@ -8,10 +8,21 @@
 //! use dez80::instruction::Instruction;
 //!
 //! // Initialize a buffer containing raw Z80 opcodes.
-//! let mut data: &[u8] = &[0x00]; // NOP
+//! let mut data: &[u8] = &[0x00, 0x04, 0x05]; // NOP, INC B, DEC B
 //!
-//! // Decode a sequence of instructions from the raw data.
-//! if let Some(instruction) = Instruction::decode_all(&mut data).first() {
+//! // Decode a single instruction from the raw bytes.
+//! if let Some(instruction) = Instruction::decode_one(&mut data) {
+//!     // Convert the instruction to a string, in its symbolic format.
+//!     assert_eq!("NOP", instruction.to_string());
+//! } else {
+//!     panic!("Could not decode an instruction!");
+//! }
+//!
+//! // Decode a sequence of instructions from the remaining bytes.
+//! let instructions = Instruction::decode_all(&mut data);
+//! assert_eq!(2, instructions.len()); // bytes are consumed as they are decoded
+//!
+//! for instruction in instructions {
 //!     println!("Decoded {}.", instruction);
 //! }
 //! ```
