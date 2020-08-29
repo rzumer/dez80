@@ -35,48 +35,35 @@ use strum_macros::IntoStaticStr;
 
 macro_rules! instruction {
     ($opcode: expr, $type: expr) => {
-        Instruction {
-            ignored_prefixes: vec![],
-            opcode: $opcode,
-            r#type: $type,
-            source: None,
-            destination: None,
-        }
+        Instruction { opcode: $opcode, r#type: $type, ..Default::default() }
     };
     ($opcode: expr, $type: expr, source: $src: expr) => {
-        Instruction {
-            ignored_prefixes: vec![],
-            opcode: $opcode,
-            r#type: $type,
-            source: Some($src),
-            destination: None,
-        }
+        Instruction { opcode: $opcode, r#type: $type, source: Some($src), ..Default::default() }
     };
     ($opcode: expr, $type: expr, destination: $dst: expr) => {
         Instruction {
-            ignored_prefixes: vec![],
             opcode: $opcode,
             r#type: $type,
-            source: None,
             destination: Some($dst),
+            ..Default::default()
         }
     };
     ($opcode: expr, $type: expr, destination: $dst: expr, source: $src: expr) => {
         Instruction {
-            ignored_prefixes: vec![],
             opcode: $opcode,
             r#type: $type,
             destination: Some($dst),
             source: Some($src),
+            ..Default::default()
         }
     };
     ($opcode: expr, $type: expr, $src: expr, $dst: expr) => {
         Instruction {
-            ignored_prefixes: vec![],
             opcode: $opcode,
             r#type: $type,
             source: Some($src),
             destination: Some($dst),
+            ..Default::default()
         }
     };
 }
@@ -1038,7 +1025,13 @@ impl Instruction {
 
 impl Default for Instruction {
     fn default() -> Self {
-        Instruction::decode_one(&mut [0x00].as_ref()).unwrap()
+        Instruction {
+            ignored_prefixes: Vec::new(),
+            opcode: Opcode { prefix: None, value: 0x00 },
+            r#type: InstructionType::Nop,
+            source: None,
+            destination: None,
+        }
     }
 }
 
