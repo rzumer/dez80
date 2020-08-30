@@ -8,12 +8,12 @@ license = "MIT"
 edition = "2018"
 
 [dependencies]
-strum = "0.15.0"
-strum_macros = "0.15.0"
+strum = "0.19"
+strum_macros = "0.19"
 
 [dev-dependencies]
-criterion = "0.2"
-rayon = "1.1"
+criterion = "0.3"
+rayon = "1.4"
 
 [[bench]]
 name = "bench"
