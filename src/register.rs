@@ -153,7 +153,7 @@ pub enum RegisterType {
     RegisterPair(RegisterPairType),
 }
 
-/// Represents individual Z80 status flags.
+/// Represents individual Z80 status flags, with their masks as their values.
 #[derive(Clone, Copy, Debug, Display, PartialEq)]
 #[repr(u8)]
 pub enum Flag {
@@ -177,4 +177,21 @@ impl Flag {
     pub const OVERFLOW: Self = Flag::PV;
     pub const SUBTRACT: Self = Flag::N;
     pub const CARRY: Self = Flag::C;
+
+    /// Returns the zero-based bit index of a flag as stored
+    /// in the flag register (`SingleRegisterType::F`).
+    pub fn index(self) -> usize {
+        use Flag::*;
+
+        match self {
+            S => 7,
+            Z => 6,
+            F5 => 5,
+            H => 4,
+            F3 => 3,
+            PV => 2,
+            N => 1,
+            C => 0,
+        }
+    }
 }
