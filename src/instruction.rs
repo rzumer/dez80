@@ -325,8 +325,19 @@ impl Instruction {
         let mut bytes = Vec::with_capacity(4 + self.ignored_prefixes.len());
         bytes.extend(self.ignored_prefixes.iter().flat_map(|x| x.to_bytes()));
 
+        // While writing any prefix bytes, signal a delay in the opcode write
+        // if the instruction is a bitwise indexed one.
+        let mut delay_opcode = false;
         if let Some(prefix) = self.opcode.prefix {
             bytes.extend(prefix.to_bytes());
+
+            if let OpcodePrefix::IndexedBitwise(_) = prefix {
+                delay_opcode = true
+            }
+        }
+
+        if !delay_opcode {
+            bytes.push(self.opcode.value);
         }
 
         match self.destination {
@@ -351,7 +362,9 @@ impl Instruction {
             _ => (),
         };
 
-        bytes.push(self.opcode.value);
+        if delay_opcode {
+            bytes.push(self.opcode.value);
+        }
 
         bytes
     }
