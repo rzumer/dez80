@@ -374,6 +374,7 @@ impl Instruction {
             | Some(MemoryIndexedAndRegister(_, idx, _))
             | Some(MemoryIndexedBitAndRegister(_, idx, _, _)) => bytes.push(idx as u8),
             Some(ProgramCounterRelative(offset)) => bytes.push(offset as u8),
+            Some(PortDirect(port)) => bytes.push(port as u8),
             _ => (),
         };
 
@@ -386,6 +387,7 @@ impl Instruction {
             | Some(MemoryIndexedAndRegister(_, idx, _))
             | Some(MemoryIndexedBitAndRegister(_, idx, _, _)) => bytes.push(idx as u8),
             Some(ProgramCounterRelative(offset)) => bytes.push(offset as u8),
+            Some(PortDirect(port)) => bytes.push(port as u8),
             _ => (),
         };
 
