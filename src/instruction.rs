@@ -26,6 +26,33 @@
 //!     println!("Decoded {}.", instruction);
 //! }
 //! ```
+//!
+//! ```
+//! use dez80::instruction::{Instruction, InstructionDecoder};
+//!
+//! // Initialize a stateful instruction decoder.
+//! let mut decoder = InstructionDecoder::new();
+//!
+//! // Decode a single byte with the decoder.
+//! let result = decoder.decode_byte(0x00); // NOP
+//!
+//! // This is a single-byte instruction, so we can verify
+//! // that a valid instruction was returned.
+//! assert!(result.is_some());
+//! assert_eq!("NOP", result.unwrap().to_string());
+//!
+//! // Decode the first byte of a multi-byte instruction.
+//! let result = decoder.decode_byte(0xED); // extended instruction
+//!
+//! // No instruction can be decoded from this byte alone.
+//! assert!(result.is_none());
+//!
+//! // Decode the second byte of the instruction.
+//! // This time, the instruction can finish decoding.
+//! let result = decoder.decode_byte(0x44); // NEG
+//! assert!(result.is_some());
+//! assert_eq!("NEG", result.unwrap().to_string());
+//! ```
 
 use crate::register::*;
 use std::fmt;
