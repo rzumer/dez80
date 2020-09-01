@@ -112,6 +112,7 @@ pub enum Condition {
 pub enum Operand {
     OctetImmediate(u8),
     DoubletImmediate(u16),
+    OctetImplied(u8),
     RegisterImplied(SingleRegisterType),
     RegisterPairImplied(RegisterPairType),
     RegisterImpliedBit(SingleRegisterType, u8),
@@ -133,7 +134,7 @@ impl fmt::Display for Operand {
         use Operand::*;
 
         match self {
-            OctetImmediate(val) => write!(f, "0x{:02x}", val),
+            OctetImmediate(val) | OctetImplied(val) => write!(f, "0x{:02x}", val),
             DoubletImmediate(val) => write!(f, "0x{:04x}", val),
             RegisterImplied(reg) => write!(f, "{}", reg),
             RegisterPairImplied(reg) => write!(f, "{}", reg),
@@ -490,7 +491,7 @@ impl Instruction {
                 0x6E => extended!(Im(0)), // sometimes reported as undefined between Im(0) and Im(1)
                 0x6F => extended!(Rld),
                 0x70 => extended!(In, source: PortIndirect(C)),
-                0x71 => extended!(Out, OctetImmediate(0), PortIndirect(C)),
+                0x71 => extended!(Out, OctetImplied(0), PortIndirect(C)),
                 0x72 => extended!(Sbc, RegisterPairImplied(SP), RegisterPairImplied(HL)),
                 0x73 => extended!(Ld, RegisterPairImplied(SP), MemoryDirect(next_doublet(bytes)?)),
                 0x74 => extended!(Neg),
@@ -1311,6 +1312,12 @@ mod tests {
     fn format_invalid_extended_instruction_with_ignored_prefix() {
         let invalid = Instruction::decode_one(&mut [0xDD, 0xED, 0x04].as_ref()).unwrap();
         assert_eq!(";DD ED 04", format!("{}", invalid));
+    }
+
+    #[test]
+    fn format_implied_octet() {
+        let result = Instruction::decode_one(&mut [0xED, 0x71].as_ref());
+        assert_eq!("OUT (C), 0", result.unwrap().to_string());
     }
 
     #[test]
