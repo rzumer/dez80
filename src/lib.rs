@@ -6,5 +6,5 @@ extern crate strum_macros;
 pub mod instruction;
 pub mod register;
 
-pub use instruction::Instruction;
+pub use instruction::{Instruction, InstructionDecoder};
 pub use register::*;
