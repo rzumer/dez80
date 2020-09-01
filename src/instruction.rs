@@ -1111,6 +1111,57 @@ impl fmt::Display for Instruction {
     }
 }
 
+/// Represents an instruction decoder that maintains a state.
+/// Used for decoding instructions in small units of data.
+#[derive(Default)]
+pub struct InstructionDecoder {
+    received_bytes: Vec<u8>,
+}
+
+impl InstructionDecoder {
+    pub fn new() -> Self {
+        InstructionDecoder { received_bytes: Vec::new() }
+    }
+
+    /// Attempts to decode an instruction by appending one byte to
+    /// the ones stored in the progressive decoder.
+    /// If there is not enough data to complete the decoding process,
+    /// the received byte is stored and `None` is returned.
+    /// Once an instruction is successfully decoded, the decoder
+    /// state is reset.
+    pub fn decode_byte(&mut self, byte: u8) -> Option<Instruction> {
+        self.received_bytes.push(byte);
+        let result = Instruction::decode_one(&mut self.received_bytes.as_slice());
+        if result.is_some() {
+            self.received_bytes.clear();
+        }
+
+        result
+    }
+
+    /// Attempts to decode an instruction by appending the bytes
+    /// from a slice to the ones stored in the progressive decoder.
+    /// If there is not enough data to complete the decoding process,
+    /// the received bytes are stored and `None` is returned.
+    /// Once an instruction is successfully decoded, the decoded
+    /// bytes are drained from the decoder state, and any extra
+    /// data in the slice is stored for subsequent decoding attempts.
+    pub fn decode_slice(&mut self, slice: &[u8]) -> Option<Instruction> {
+        self.received_bytes.extend_from_slice(slice);
+        let result = Instruction::decode_one(&mut self.received_bytes.as_slice());
+        if let Some(instruction) = result.clone() {
+            self.received_bytes.drain(0..instruction.to_bytes().len());
+        }
+
+        result
+    }
+
+    /// Resets the decoder state, allowing decoding to start from scratch.
+    pub fn reset(&mut self) {
+        self.received_bytes.clear();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1257,5 +1308,57 @@ mod tests {
             let instruction = Instruction::decode_one(&mut bytes.as_ref()).unwrap();
             assert_eq!(bytes.to_vec(), instruction.to_bytes());
         }
+    }
+
+    #[test]
+    fn decode_single_byte_with_decoder() {
+        let instruction_byte = 0x00;
+        let mut decoder = InstructionDecoder::new();
+        let result = decoder.decode_byte(instruction_byte);
+        assert!(result.is_some());
+        assert_eq!(&[instruction_byte], result.unwrap().to_bytes().as_slice());
+        assert_eq!(0, decoder.received_bytes.len());
+    }
+
+    #[test]
+    fn decode_multiple_bytes_with_decoder() {
+        let instruction_bytes = &[0x01, 0x02, 0x03];
+        let mut decoder = InstructionDecoder::new();
+        let result = decoder.decode_byte(instruction_bytes[0]); // LD BC, **
+        assert!(result.is_none());
+        let result = decoder.decode_byte(instruction_bytes[1]); // LD BC, 0x**02
+        assert!(result.is_none());
+        let result = decoder.decode_byte(instruction_bytes[2]); // LD BC, 0x0302
+        assert!(result.is_some());
+        assert_eq!(instruction_bytes, result.unwrap().to_bytes().as_slice());
+        assert_eq!(0, decoder.received_bytes.len());
+    }
+
+    #[test]
+    fn decode_slice_with_decoder() {
+        let instruction_bytes = &[0x01, 0x33, 0x22];
+        let mut decoder = InstructionDecoder::new();
+        let result = decoder.decode_slice(instruction_bytes);
+        assert!(result.is_some());
+        assert_eq!(instruction_bytes, result.unwrap().to_bytes().as_slice());
+        assert_eq!(0, decoder.received_bytes.len());
+    }
+
+    #[test]
+    fn decode_two_instruction_slice_with_decoder() {
+        let instruction_bytes = &[0x06, 0x11, 0x00];
+        let mut decoder = InstructionDecoder::new();
+
+        // LD B, *
+        let result = decoder.decode_slice(instruction_bytes);
+        assert!(result.is_some());
+        assert_eq!(&instruction_bytes[0..=1], result.unwrap().to_bytes().as_slice());
+        assert_eq!(1, decoder.received_bytes.len());
+
+        // NOP
+        let result = decoder.decode_slice(&[]);
+        assert!(result.is_some());
+        assert_eq!(&instruction_bytes[2..], result.unwrap().to_bytes().as_slice());
+        assert_eq!(0, decoder.received_bytes.len());
     }
 }
