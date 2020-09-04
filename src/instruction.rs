@@ -1157,13 +1157,13 @@ impl InstructionDecoder {
     /// the ones stored in the progressive decoder.
     /// If there is not enough data to complete the decoding process,
     /// the received byte is stored and `None` is returned.
-    /// Once an instruction is successfully decoded, the decoder
-    /// state is reset.
+    /// Once an instruction is successfully decoded, its bytes are
+    /// drained from the decoder source.
     pub fn decode_byte(&mut self, byte: u8) -> Option<Instruction> {
         self.received_bytes.push(byte);
         let result = Instruction::decode_one(&mut self.received_bytes.as_slice());
-        if result.is_some() {
-            self.received_bytes.clear();
+        if let Some(instruction) = result.clone() {
+            self.received_bytes.drain(0..instruction.to_bytes().len());
         }
 
         result
