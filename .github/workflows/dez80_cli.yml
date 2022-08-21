@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Validate dependency tree licenses
+      uses: EmbarkStudios/cargo-deny-action@v1
     - name: Build
       working-directory: ${{github.workspace}}/bin
       run: cargo build --verbose
