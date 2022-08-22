@@ -1,3 +1,38 @@
+//! Contains an interface for stateful decoding that does not require
+//! all bytes of an instruction to be available at once.
+//!
+//! # Example
+//!
+//! ```
+//! use dez80::InstructionDecoder;
+//!
+//! // Initialize a stateful instruction decoder.
+//! let mut decoder = InstructionDecoder::new();
+//!
+//! // Decode a single byte with the decoder.
+//! decoder.push_byte(0x00); // NOP
+//! let result = decoder.try_decode();
+//!
+//! // This is a single-byte instruction, so we can verify
+//! // that a valid instruction was returned.
+//! assert!(result.is_ok());
+//! assert_eq!("NOP", result.unwrap().to_string());
+//!
+//! // Decode the first byte of a multi-byte instruction.
+//! decoder.push_byte(0xED); // extended instruction
+//! let result = decoder.try_decode();
+//!
+//! // No instruction can be decoded from this byte alone.
+//! assert!(result.is_err());
+//!
+//! // Decode the second byte of the instruction.
+//! // This time, the instruction can finish decoding.
+//! decoder.push_byte(0x44); // NEG
+//! let result = decoder.try_decode();
+//! assert!(result.is_ok());
+//! assert_eq!("NEG", result.unwrap().to_string());
+//! ```
+
 use crate::instruction::*;
 
 /// Represents an instruction decoder that maintains a state.
