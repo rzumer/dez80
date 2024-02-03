@@ -5,6 +5,8 @@ A Z80 instruction decoding and (dis)assembly library.
 ## Features
 
 * Standard Z80 instruction decoding and encoding
+* Undocumented instruction support
+* Invalid and chained opcode prefix handling
 * Implementation-independent data structures
 * Stateful and stateless instruction decoding interfaces
 * Format handlers for displaying instructions and their individual components
