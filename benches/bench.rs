@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate criterion;
 
-use criterion::{Bencher, Criterion, Fun};
+use criterion::{Bencher, Criterion};
 use dez80::Instruction;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
@@ -24,17 +24,14 @@ fn bench_instruction_to_bytes(c: &mut Criterion) {
         b.iter(|| instructions.par_iter().flat_map(|i| i.to_bytes()).collect::<Vec<u8>>())
     }
 
-    let sequential_operations = Fun::new("Sequential", bench_sequential);
-    let parallel_operations = Fun::new("Parallel", bench_parallel);
-
-    let funs = vec![sequential_operations, parallel_operations];
     let mut instructions = Instruction::decode_all(&mut INSTRUCTION_STREAM);
-
     while instructions.len() < 1024 {
         instructions.append(&mut instructions.clone());
     }
 
-    c.bench_functions("Instruction::to_bytes", funs, instructions);
+    let mut bench_group = c.benchmark_group("Instruction::to_bytes");
+    bench_group.bench_with_input("Sequential", &instructions, bench_sequential);
+    bench_group.bench_with_input("Parallel", &instructions, bench_parallel);
 }
 
 fn bench_instruction_to_string(c: &mut Criterion) {
@@ -46,17 +43,14 @@ fn bench_instruction_to_string(c: &mut Criterion) {
         b.iter(|| instructions.par_iter().map(|i| i.to_string()).collect::<Vec<String>>())
     }
 
-    let sequential_operations = Fun::new("Sequential", bench_sequential);
-    let parallel_operations = Fun::new("Parallel", bench_parallel);
-
-    let funs = vec![sequential_operations, parallel_operations];
     let mut instructions = Instruction::decode_all(&mut INSTRUCTION_STREAM);
-
     while instructions.len() < 1024 {
         instructions.append(&mut instructions.clone());
     }
 
-    c.bench_functions("Instruction::to_string", funs, instructions);
+    let mut bench_group = c.benchmark_group("Instruction::to_string");
+    bench_group.bench_with_input("Sequential", &instructions, bench_sequential);
+    bench_group.bench_with_input("Parallel", &instructions, bench_parallel);
 }
 
 criterion_group!(
