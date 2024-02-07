@@ -669,9 +669,7 @@ impl Instruction {
                     // returned to the user will be the result of a full single
                     // decode-fetch cycle.
                     let mut final_instruction = Instruction::decode_one_inner(bytes)?;
-                    final_instruction.ignored_prefixes.push(Indexed(idx));
-                    // Ensure that the prefixes are in order.
-                    final_instruction.ignored_prefixes.reverse();
+                    final_instruction.ignored_prefixes.insert(0, Indexed(idx));
 
                     Ok(final_instruction)
                 }
@@ -1260,7 +1258,6 @@ mod tests {
     fn decode_incomplete_instruction_sequence() {
         let instruction_sequence_bytes = &mut [0x00, 0x00, 0x06].as_ref();
         let mut instruction_sequence = Instruction::decode_all(instruction_sequence_bytes);
-
         assert_eq!(2, instruction_sequence.len());
 
         while let Some(nop) = instruction_sequence.pop() {
@@ -1279,10 +1276,14 @@ mod tests {
         use OpcodePrefix::*;
         use RegisterPairType::*;
 
-        let invalid = Instruction::decode_one(&mut [0xDD, 0xFD, 0xFD, 0x00].as_ref()).unwrap();
-        assert_eq!(vec![Indexed(IX), Indexed(IY), Indexed(IY)], invalid.ignored_prefixes);
+        let invalid =
+            Instruction::decode_one(&mut [0xDD, 0xFD, 0xDD, 0xFD, 0xFD, 0x00].as_ref()).unwrap();
+        assert_eq!(
+            vec![Indexed(IX), Indexed(IY), Indexed(IX), Indexed(IY), Indexed(IY)],
+            invalid.ignored_prefixes
+        );
         assert_eq!(None, invalid.opcode.prefix);
-        assert_eq!("NOP ;invalid prefix: DD FD FD", format!("{}", invalid));
+        assert_eq!("NOP ;invalid prefix: DD FD DD FD FD", format!("{}", invalid));
     }
 
     #[test]
