@@ -38,7 +38,7 @@ use crate::instruction::*;
 /// Represents an instruction decoder that maintains a state.
 /// Its main use case is to decode instructions progressively
 /// byte by byte, when a data source cannot implement `Read`.
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct InstructionDecoder {
     received_bytes: Vec<u8>,
 }
