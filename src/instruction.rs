@@ -1078,8 +1078,8 @@ impl Instruction {
     }
 
     /// Decodes a single instruction from a source, or `None` if one cannot be decoded.
-    /// This is a thin wrapper around `Instruction::decode()`, which does not require
-    /// the caller to convert its source to a `Peekable<Bytes<R>>`.
+    /// This is a thin wrapper around `Instruction::decode_one_inner()`, which does not require
+    /// the caller to convert its source to a `Peekable<Bytes<R>>` to simplify usage.
     pub fn decode_one<R: Read>(source: &mut R) -> Result<Instruction, DecodingState> {
         let mut bytes = source.bytes().peekable();
 
