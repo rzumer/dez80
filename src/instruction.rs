@@ -308,18 +308,22 @@ pub enum DecodingState {
     RootOpcode,
     /// An operand must be decoded for a root instruction.
     RootOperand,
+    /// A displacement operand must be decoded for a root instruction.
+    RootDisplacement,
     /// An opcode must be decoded for an extended instruction.
     ExtendedOpcode,
     /// An operand must be decoded for an extended instruction.
     ExtendedOperand,
     /// An opcode must be decoded for an indexed instruction.
     IndexedOpcode,
+    /// A displacement operand must be decoded for an indexed instruction.
+    IndexedDisplacement,
     /// An operand must be decoded for an indexed instruction.
     IndexedOperand,
     /// An opcode must be decoded for a bitwise instruction.
     BitwiseOpcode,
-    /// An operand must be decoded for an indexed bitwise instruction.
-    IndexedBitwiseOperand,
+    /// A displacement operand must be decoded for an indexed bitwise instruction.
+    IndexedBitwiseDisplacement,
     /// An opcode must be decoded for an indexed bitwise instruction.
     IndexedBitwiseOpcode,
 }
@@ -544,7 +548,7 @@ impl Instruction {
             // For indexed bitwise instructions, an offset is provided before the final opcode.
             let (offset, opcode) = if index_register.is_some() {
                 (
-                    next_byte(bytes).ok_or(DecodingState::IndexedBitwiseOperand)? as i8,
+                    next_byte(bytes).ok_or(DecodingState::IndexedBitwiseDisplacement)? as i8,
                     next_byte(bytes).ok_or(DecodingState::IndexedBitwiseOpcode)?,
                 )
             } else {
@@ -647,6 +651,9 @@ impl Instruction {
             macro_rules! next_doublet {
                 () => { next_doublet(bytes).ok_or(DecodingState::IndexedOperand)? };
             }
+            macro_rules! next_displacement {
+                () => { next_byte(bytes).ok_or(DecodingState::IndexedDisplacement)? as i8 };
+            }
 
             match opcode {
                 // Detect an invalid instruction first. This is needed to ensure that
@@ -696,27 +703,27 @@ impl Instruction {
                         0x2D => indexed!(Dec, destination: RegisterImplied(idx_l)),
                         0x2E => indexed!(Ld, OctetImmediate(next_byte!()), RegisterImplied(idx_l)),
                         // 0x2F ~ 0x33
-                        0x34 => indexed!(Inc, destination: MemoryIndexed(idx, next_byte!() as i8)),
-                        0x35 => indexed!(Dec, destination: MemoryIndexed(idx, next_byte!() as i8)),
-                        0x36 => indexed!(Ld, destination: MemoryIndexed(idx, next_byte!() as i8), source: OctetImmediate(next_byte!())),
+                        0x34 => indexed!(Inc, destination: MemoryIndexed(idx, next_displacement!())),
+                        0x35 => indexed!(Dec, destination: MemoryIndexed(idx, next_displacement!())),
+                        0x36 => indexed!(Ld, destination: MemoryIndexed(idx, next_displacement!()), source: OctetImmediate(next_byte!())),
                         // 0x37 ~ 0x38
                         0x39 => indexed!(Add, RegisterPairImplied(SP), RegisterPairImplied(idx)),
                         // 0x3A ~ 0x43
                         0x44 => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(B)),
                         0x45 => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(B)),
-                        0x46 => indexed!(Ld, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(B)),
+                        0x46 => indexed!(Ld, MemoryIndexed(idx, next_displacement!()), RegisterImplied(B)),
                         // 0x47 ~ 0x4B
                         0x4C => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(C)),
                         0x4D => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(C)),
-                        0x4E => indexed!(Ld, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(C)),
+                        0x4E => indexed!(Ld, MemoryIndexed(idx, next_displacement!()), RegisterImplied(C)),
                         // 0x4F ~ 0x53
                         0x54 => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(D)),
                         0x55 => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(D)),
-                        0x56 => indexed!(Ld, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(D)),
+                        0x56 => indexed!(Ld, MemoryIndexed(idx, next_displacement!()), RegisterImplied(D)),
                         // 0x57 ~ 0x5B
                         0x5C => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(E)),
                         0x5D => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(E)),
-                        0x5E => indexed!(Ld, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(E)),
+                        0x5E => indexed!(Ld, MemoryIndexed(idx, next_displacement!()), RegisterImplied(E)),
                         // 0x5F
                         0x60 => indexed!(Ld, RegisterImplied(B), RegisterImplied(idx_h)),
                         0x61 => indexed!(Ld, RegisterImplied(C), RegisterImplied(idx_h)),
@@ -724,7 +731,7 @@ impl Instruction {
                         0x63 => indexed!(Ld, RegisterImplied(E), RegisterImplied(idx_h)),
                         0x64 => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(idx_h)),
                         0x65 => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(idx_h)),
-                        0x66 => indexed!(Ld, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(H)),
+                        0x66 => indexed!(Ld, MemoryIndexed(idx, next_displacement!()), RegisterImplied(H)),
                         0x67 => indexed!(Ld, RegisterImplied(A), RegisterImplied(idx_h)),
                         0x68 => indexed!(Ld, RegisterImplied(B), RegisterImplied(idx_l)),
                         0x69 => indexed!(Ld, RegisterImplied(C), RegisterImplied(idx_l)),
@@ -732,52 +739,52 @@ impl Instruction {
                         0x6B => indexed!(Ld, RegisterImplied(E), RegisterImplied(idx_l)),
                         0x6C => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(idx_l)),
                         0x6D => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(idx_l)),
-                        0x6E => indexed!(Ld, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(L)),
+                        0x6E => indexed!(Ld, MemoryIndexed(idx, next_displacement!()), RegisterImplied(L)),
                         0x6F => indexed!(Ld, RegisterImplied(A), RegisterImplied(idx_l)),
-                        0x70 => indexed!(Ld, RegisterImplied(B), MemoryIndexed(idx, next_byte!() as i8)),
-                        0x71 => indexed!(Ld, RegisterImplied(C), MemoryIndexed(idx, next_byte!() as i8)),
-                        0x72 => indexed!(Ld, RegisterImplied(D), MemoryIndexed(idx, next_byte!() as i8)),
-                        0x73 => indexed!(Ld, RegisterImplied(E), MemoryIndexed(idx, next_byte!() as i8)),
-                        0x74 => indexed!(Ld, RegisterImplied(H), MemoryIndexed(idx, next_byte!() as i8)),
-                        0x75 => indexed!(Ld, RegisterImplied(L), MemoryIndexed(idx, next_byte!() as i8)),
+                        0x70 => indexed!(Ld, RegisterImplied(B), MemoryIndexed(idx, next_displacement!())),
+                        0x71 => indexed!(Ld, RegisterImplied(C), MemoryIndexed(idx, next_displacement!())),
+                        0x72 => indexed!(Ld, RegisterImplied(D), MemoryIndexed(idx, next_displacement!())),
+                        0x73 => indexed!(Ld, RegisterImplied(E), MemoryIndexed(idx, next_displacement!())),
+                        0x74 => indexed!(Ld, RegisterImplied(H), MemoryIndexed(idx, next_displacement!())),
+                        0x75 => indexed!(Ld, RegisterImplied(L), MemoryIndexed(idx, next_displacement!())),
                         // 0x76
-                        0x77 => indexed!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_byte!() as i8)),
+                        0x77 => indexed!(Ld, RegisterImplied(A), MemoryIndexed(idx, next_displacement!())),
                         // 0x78 ~ 0x7B
                         0x7C => indexed!(Ld, RegisterImplied(idx_h), RegisterImplied(A)),
                         0x7D => indexed!(Ld, RegisterImplied(idx_l), RegisterImplied(A)),
-                        0x7E => indexed!(Ld, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(A)),
+                        0x7E => indexed!(Ld, MemoryIndexed(idx, next_displacement!()), RegisterImplied(A)),
                         // 0x7F ~ 0x83
                         0x84 => indexed!(Add, RegisterImplied(idx_h), RegisterImplied(A)),
                         0x85 => indexed!(Add, RegisterImplied(idx_l), RegisterImplied(A)),
-                        0x86 => indexed!(Add, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(A)),
+                        0x86 => indexed!(Add, MemoryIndexed(idx, next_displacement!()), RegisterImplied(A)),
                         // 0x87 ~ 0x8B
                         0x8C => indexed!(Adc, RegisterImplied(idx_h), RegisterImplied(A)),
                         0x8D => indexed!(Adc, RegisterImplied(idx_l), RegisterImplied(A)),
-                        0x8E => indexed!(Adc, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(A)),
+                        0x8E => indexed!(Adc, MemoryIndexed(idx, next_displacement!()), RegisterImplied(A)),
                         // 0x8F ~ 0x93
                         0x94 => indexed!(Sub, source: RegisterImplied(idx_h)),
                         0x95 => indexed!(Sub, source: RegisterImplied(idx_l)),
-                        0x96 => indexed!(Sub, source: MemoryIndexed(idx, next_byte!() as i8)),
+                        0x96 => indexed!(Sub, source: MemoryIndexed(idx, next_displacement!())),
                         // 0x97 ~ 0x9B
                         0x9C => indexed!(Sbc, RegisterImplied(idx_h), RegisterImplied(A)),
                         0x9D => indexed!(Sbc, RegisterImplied(idx_l), RegisterImplied(A)),
-                        0x9E => indexed!(Sbc, MemoryIndexed(idx, next_byte!() as i8), RegisterImplied(A)),
+                        0x9E => indexed!(Sbc, MemoryIndexed(idx, next_displacement!()), RegisterImplied(A)),
                         // 0x9F ~ 0xA3
                         0xA4 => indexed!(And, source: RegisterImplied(idx_h)),
                         0xA5 => indexed!(And, source: RegisterImplied(idx_l)),
-                        0xA6 => indexed!(And, source: MemoryIndexed(idx, next_byte!() as i8)),
+                        0xA6 => indexed!(And, source: MemoryIndexed(idx, next_displacement!())),
                         // 0xA7 ~ 0xAB
                         0xAC => indexed!(Xor, source: RegisterImplied(idx_h)),
                         0xAD => indexed!(Xor, source: RegisterImplied(idx_l)),
-                        0xAE => indexed!(Xor, source: MemoryIndexed(idx, next_byte!() as i8)),
+                        0xAE => indexed!(Xor, source: MemoryIndexed(idx, next_displacement!())),
                         // 0xAF ~ 0xB3
                         0xB4 => indexed!(Or, source: RegisterImplied(idx_h)),
                         0xB5 => indexed!(Or, source: RegisterImplied(idx_l)),
-                        0xB6 => indexed!(Or, source: MemoryIndexed(idx, next_byte!() as i8)),
+                        0xB6 => indexed!(Or, source: MemoryIndexed(idx, next_displacement!())),
                         // 0xB7 ~ 0xBB
                         0xBC => indexed!(Cp, source: RegisterImplied(idx_h)),
                         0xBD => indexed!(Cp, source: RegisterImplied(idx_l)),
-                        0xBE => indexed!(Cp, source: MemoryIndexed(idx, next_byte!() as i8)),
+                        0xBE => indexed!(Cp, source: MemoryIndexed(idx, next_displacement!())),
                         // 0xBF ~ 0xCA
                         0xCB => decode_bit_instruction(bytes, Some(idx))?,
                         // 0xCC ~ 0xE0
@@ -814,6 +821,9 @@ impl Instruction {
         macro_rules! next_doublet {
             () => { next_doublet(bytes).ok_or(DecodingState::RootOperand)? };
         }
+        macro_rules! next_displacement {
+            () => { next_byte(bytes).ok_or(DecodingState::RootDisplacement)? as i8 };
+        }
 
         let instruction = match opcode {
             0x00 => root!(Nop),
@@ -832,7 +842,7 @@ impl Instruction {
             0x0D => root!(Dec, destination: RegisterImplied(C)),
             0x0E => root!(Ld, OctetImmediate(next_byte!()), RegisterImplied(C)),
             0x0F => root!(Rrca),
-            0x10 => root!(Djnz, source: ProgramCounterRelative(next_byte!() as i8)),
+            0x10 => root!(Djnz, source: ProgramCounterRelative(next_displacement!())),
             0x11 => root!(Ld, DoubletImmediate(next_doublet!()), RegisterPairImplied(DE)),
             0x12 => root!(Ld, RegisterImplied(A), MemoryIndirect(DE)),
             0x13 => root!(Inc, destination: RegisterPairImplied(DE)),
@@ -840,7 +850,7 @@ impl Instruction {
             0x15 => root!(Dec, destination: RegisterImplied(D)),
             0x16 => root!(Ld, OctetImmediate(next_byte!()), RegisterImplied(D)),
             0x17 => root!(Rla),
-            0x18 => root!(Jr(None), source: ProgramCounterRelative(next_byte!() as i8)),
+            0x18 => root!(Jr(None), source: ProgramCounterRelative(next_displacement!())),
             0x19 => root!(Add, RegisterPairImplied(DE), RegisterPairImplied(HL)),
             0x1A => root!(Ld, MemoryIndirect(DE), RegisterImplied(A)),
             0x1B => root!(Dec, destination: RegisterPairImplied(DE)),
@@ -848,7 +858,7 @@ impl Instruction {
             0x1D => root!(Dec, destination: RegisterImplied(E)),
             0x1E => root!(Ld, OctetImmediate(next_byte!()), RegisterImplied(E)),
             0x1F => root!(Rra),
-            0x20 => root!(Jr(Some(FlagNotSet(Flag::Z))), source: ProgramCounterRelative(next_byte!() as i8)),
+            0x20 => root!(Jr(Some(FlagNotSet(Flag::Z))), source: ProgramCounterRelative(next_displacement!())),
             0x21 => root!(Ld, DoubletImmediate(next_doublet!()), RegisterPairImplied(HL)),
             0x22 => root!(Ld, RegisterPairImplied(HL), MemoryDirect(next_doublet!())),
             0x23 => root!(Inc, destination: RegisterPairImplied(HL)),
@@ -856,7 +866,7 @@ impl Instruction {
             0x25 => root!(Dec, destination: RegisterImplied(H)),
             0x26 => root!(Ld, OctetImmediate(next_byte!()), RegisterImplied(H)),
             0x27 => root!(Daa),
-            0x28 => root!(Jr(Some(FlagSet(Flag::Z))), source: ProgramCounterRelative(next_byte!() as i8)),
+            0x28 => root!(Jr(Some(FlagSet(Flag::Z))), source: ProgramCounterRelative(next_displacement!())),
             0x29 => root!(Add, RegisterPairImplied(HL), RegisterPairImplied(HL)),
             0x2A => root!(Ld, MemoryDirect(next_doublet!()), RegisterPairImplied(HL)),
             0x2B => root!(Dec, destination: RegisterPairImplied(HL)),
@@ -864,7 +874,7 @@ impl Instruction {
             0x2D => root!(Dec, destination: RegisterImplied(L)),
             0x2E => root!(Ld, OctetImmediate(next_byte!()), RegisterImplied(L)),
             0x2F => root!(Cpl),
-            0x30 => root!(Jr(Some(FlagNotSet(Flag::C))), source: ProgramCounterRelative(next_byte!() as i8)),
+            0x30 => root!(Jr(Some(FlagNotSet(Flag::C))), source: ProgramCounterRelative(next_displacement!())),
             0x31 => root!(Ld, DoubletImmediate(next_doublet!()), RegisterPairImplied(SP)),
             0x32 => root!(Ld, RegisterImplied(A), MemoryDirect(next_doublet!())),
             0x33 => root!(Inc, destination: RegisterPairImplied(SP)),
@@ -872,7 +882,7 @@ impl Instruction {
             0x35 => root!(Dec, destination: MemoryIndirect(HL)),
             0x36 => root!(Ld, OctetImmediate(next_byte!()), MemoryIndirect(HL)),
             0x37 => root!(Scf),
-            0x38 => root!(Jr(Some(FlagSet(Flag::C))), source: ProgramCounterRelative(next_byte!() as i8)),
+            0x38 => root!(Jr(Some(FlagSet(Flag::C))), source: ProgramCounterRelative(next_displacement!())),
             0x39 => root!(Add, RegisterPairImplied(SP), RegisterPairImplied(HL)),
             0x3A => root!(Ld, MemoryDirect(next_doublet!()), RegisterImplied(A)),
             0x3B => root!(Dec, destination: RegisterPairImplied(SP)),
