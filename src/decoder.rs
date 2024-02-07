@@ -7,7 +7,7 @@
 //! use dez80::InstructionDecoder;
 //!
 //! // Initialize a stateful instruction decoder.
-//! let mut decoder = InstructionDecoder::new();
+//! let mut decoder = InstructionDecoder::default();
 //!
 //! // Decode a single byte with the decoder.
 //! decoder.push_byte(0x00); // NOP
@@ -44,10 +44,6 @@ pub struct InstructionDecoder {
 }
 
 impl InstructionDecoder {
-    pub fn new() -> Self {
-        InstructionDecoder { received_bytes: Vec::new() }
-    }
-
     /// Attempts to decode one instruction from the decoder's source.
     /// If there is not enough data to complete the decoding process,
     /// an `Err<DecodingState>` is returned, which describes the state
@@ -86,7 +82,7 @@ mod tests {
     #[test]
     fn decode_single_byte_with_decoder() {
         let instruction_byte = 0x00;
-        let mut decoder = InstructionDecoder::new();
+        let mut decoder = InstructionDecoder::default();
         decoder.push_byte(instruction_byte);
         let result = decoder.try_decode();
         assert!(result.is_ok());
@@ -97,7 +93,7 @@ mod tests {
     #[test]
     fn decode_multiple_bytes_with_decoder() {
         let instruction_bytes = &[0x01, 0x02, 0x03];
-        let mut decoder = InstructionDecoder::new();
+        let mut decoder = InstructionDecoder::default();
         decoder.push_byte(instruction_bytes[0]); // LD BC, **
         assert!(decoder.try_decode().is_err());
         decoder.push_byte(instruction_bytes[1]); // LD BC, 0x**02
@@ -112,7 +108,7 @@ mod tests {
     #[test]
     fn decode_slice_with_decoder() {
         let instruction_bytes = &[0x01, 0x33, 0x22];
-        let mut decoder = InstructionDecoder::new();
+        let mut decoder = InstructionDecoder::default();
         decoder.push_slice(instruction_bytes);
         let result = decoder.try_decode();
         assert!(result.is_ok());
@@ -123,7 +119,7 @@ mod tests {
     #[test]
     fn decode_two_instruction_slice_with_decoder() {
         let instruction_bytes = &[0x06, 0x11, 0x00];
-        let mut decoder = InstructionDecoder::new();
+        let mut decoder = InstructionDecoder::default();
 
         // LD B, *
         decoder.push_slice(instruction_bytes);
