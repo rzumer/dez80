@@ -2,7 +2,7 @@
 name = "dez80_cli"
 version = "1.0.2"
 description = "A Z80 disassembler interface based on the DeZ80 library."
-repository = "https://github.com/rzumer/rz80"
+repository = "https://github.com/rzumer/dez80"
 authors = ["Raphaël Zumer <rzumer@tebako.net>"]
 license = "MIT"
 edition = "2018"
