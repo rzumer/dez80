@@ -2,45 +2,38 @@ extern crate clap;
 #[cfg(feature = "rayon")]
 extern crate rayon;
 
-use clap::{App, Arg};
+use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use dez80::Instruction;
 #[cfg(feature = "rayon")]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::fs::File;
-use std::io::{BufReader, BufWriter, Write};
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter, Write},
+};
 
 fn main() -> Result<(), std::io::Error> {
-    macro_rules! cargo_env {
-        ($name: expr) => {
-            env!(concat!("CARGO_PKG_", $name))
-        };
-    }
-
-    let matches = App::new(cargo_env!("NAME"))
-        .version(cargo_env!("VERSION"))
-        .author(cargo_env!("AUTHORS"))
-        .about(cargo_env!("DESCRIPTION"))
-        .arg(
-            Arg::with_name("input")
-                .short("i")
+    let matches = Command::new(crate_name!())
+        .version(crate_version!())
+        .author(crate_authors!())
+        .about(crate_description!())
+        .args([
+            Arg::new("input")
+                .short('i')
                 .long("input")
                 .value_name("INPUT_FILE")
                 .help("The input file to disassemble")
-                .required(true)
-                .index(1),
-        )
-        .arg(
-            Arg::with_name("output")
-                .short("o")
+                .required(true),
+            Arg::new("output")
+                .short('o')
                 .long("output")
                 .value_name("OUTPUT_FILE")
-                .help("The output file in which to dump the assembly code")
-                .index(2),
-        )
+                .help("The output file in which to dump the assembly code"),
+        ])
+        .arg_required_else_help(true)
         .get_matches();
 
     // Open the specified input file using a buffered reader.
-    let input_file = File::open(matches.value_of("input").unwrap())?;
+    let input_file = File::open(matches.get_one::<String>("input").unwrap())?;
     let mut reader = BufReader::new(input_file);
 
     // Decode instructions in the byte stream.
@@ -54,7 +47,7 @@ fn main() -> Result<(), std::io::Error> {
     let formatted = instructions.iter().map(|i| i.to_string()).collect::<Vec<String>>().join("\n");
 
     // Write out the mnemonics to file or standard output.
-    if let Some(output_path) = matches.value_of("output") {
+    if let Some(output_path) = matches.get_one::<String>("output") {
         let mut writer = BufWriter::new(File::create(output_path)?);
         writer.write_all(formatted.as_bytes())?;
     } else {
