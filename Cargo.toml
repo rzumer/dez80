@@ -1,19 +1,19 @@
 [package]
 name = "dez80"
 version = "3.0.1"
-description = "A Z80 disassembly library."
+description = "A Z80 instruction decoding and (dis)assembly library."
 repository = "https://github.com/rzumer/dez80"
 authors = ["Raphaël Zumer <rzumer@tebako.net>"]
 license = "MIT"
 edition = "2021"
 
 [dependencies]
-strum = "0.19"
-strum_macros = "0.19"
+strum = "0.26"
+strum_macros = "0.26"
 
 [dev-dependencies]
-criterion = "0.3"
-rayon = "1.4"
+criterion = "0.5"
+rayon = "1.8"
 
 [[bench]]
 name = "bench"
