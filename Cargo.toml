@@ -1,6 +1,6 @@
 [package]
 name = "dez80"
-version = "4.0.0"
+version = "4.0.1"
 description = "A Z80 instruction decoding and (dis)assembly library."
 repository = "https://github.com/rzumer/dez80"
 authors = ["Raphaël Zumer <rzumer@tebako.net>"]
