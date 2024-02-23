@@ -222,12 +222,12 @@ impl fmt::Display for InstructionType {
             Call(Some(cond)) | Jp(Some(cond)) | Jr(Some(cond)) | Ret(Some(cond)) => match cond {
                 Condition::FlagSet(flag) => match flag {
                     Flag::PV => write!(f, " PE"), // Parity Even
-                    Flag::S => write!(f, " M"),   // Sign Positive
+                    Flag::S => write!(f, " M"),   // Sign Negative (Minus)
                     _ => write!(f, " {}", flag),
                 },
                 Condition::FlagNotSet(flag) => match flag {
                     Flag::PV => write!(f, " PO"), // Parity Odd
-                    Flag::S => write!(f, " P"),   // Sign Negative
+                    Flag::S => write!(f, " P"),   // Sign Positive (Plus)
                     _ => write!(f, " N{}", flag),
                 },
                 _ => Ok(()),
